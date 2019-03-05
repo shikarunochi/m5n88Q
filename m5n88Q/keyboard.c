@@ -2927,7 +2927,7 @@ const char *keyboard_key882str(int key88)
  *
  *
  *****************************************************************************/
-#include <file-op.h>
+#include "file-op.h"
 
 static int symbol2int(const char *str,
                       const T_SYMBOL_TABLE table_symbol2int[],

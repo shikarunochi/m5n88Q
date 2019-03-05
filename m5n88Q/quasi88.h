@@ -23,8 +23,6 @@
 /*----------------------------------------------------------------------*/
 #include "version.h"
 
-
-
 /*----------------------------------------------------------------------*/
 /* 共通定義								*/
 /*----------------------------------------------------------------------*/
@@ -274,7 +272,7 @@ void	profiler_video_output(int timing, int skip, int drawn);
 #define	profiler_video_output(t,s,d)
 #endif
 
-int	quasi88main(void);
+int  quasi88main(void);
 
 extern void M5SerialPrintln(const char* logString);
 extern void M5SerialPrint(const char* logString);

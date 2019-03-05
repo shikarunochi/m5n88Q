@@ -110,7 +110,6 @@ struct OSD_FILE_STRUCT {
     int		type;			/* ファイル種別		*/
     char	*path;			/* ファイル名		*/
     char	mode[4];		/* 開いた際の、モード	*/
-
 };
 
 #define	MAX_STREAM	8
@@ -178,8 +177,15 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
         default:
             Serial.print("Path:");
             Serial.println(path);
-            st->sdFile = SD.open(String(path), FILE_READ);
-
+            if(strchr(mode,'+')!=0){
+                st->sdFile = SD.open(String(path), "r+");
+            }else if(strchr(mode,'a')!=0){
+                st->sdFile = SD.open(String(path), FILE_APPEND);
+            }else if(strchr(mode,'w')!=0){
+                st->sdFile = SD.open(String(path), FILE_WRITE);
+            }else{
+                st->sdFile = SD.open(String(path), FILE_READ);
+            }
 	        if (st->sdFile) {
         	    st->type = type;
         	    if (st->path){
@@ -219,7 +225,6 @@ int	osd_fclose(OSD_FILE *stream)
 int	osd_fflush(OSD_FILE *stream)
 {
     if (stream == NULL) return fflush(NULL);
-
     stream->sdFile.flush();
     return EOF;
 }
@@ -246,7 +251,6 @@ int	osd_fseek(OSD_FILE *stream, long offset, int whence)
 long	osd_ftell(OSD_FILE *stream)
 {
     return stream->sdFile.position();  
-    return -1;
 }
 
 
@@ -262,12 +266,7 @@ size_t	osd_fread(void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
     if(stream->sdFile.available()){
       readByte = stream->sdFile.read((byte*)ptr, nobj);
     }
-   /*
-    Serial.print("osd_read:");
-    Serial.print(stream->path);
-    Serial.printf(":%d byte, %d size", readByte, size);
-    Serial.println("");
-    */
+
     return (readByte / size);
 }
 
@@ -275,12 +274,9 @@ size_t	osd_fread(void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
 
 size_t	osd_fwrite(const void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
 {
-    Serial.print("fwrite");
-    size_t retSize = 0;
-    retSize = stream->sdFile.write((byte*)ptr, size * nobj);
-    Serial.printf("size:%d  nobj:%d retSize:%d", size, nobj, retSize);
-
-    return retSize;    
+    int writeByte = stream->sdFile.write((byte*)ptr, size * nobj);
+    //Serial.printf("size:%d  nobj:%d retSize:%d", size, nobj, writeByte);
+    return writeByte / size;
 }
 
 int	osd_fputc(int c, OSD_FILE *stream)
@@ -313,8 +309,8 @@ char *osd_fgets(char *str, int size, OSD_FILE *stream)
 
 int	osd_fputs(const char *str, OSD_FILE *stream)
 {
-    int length = strnlen(str, 256);
-   	return stream->sdFile.write((uint8_t*)str, length);
+    int length = strnlen(str, 1024);
+   	return stream->sdFile.write((uint8_t*)str, length); 
 }
 
 
