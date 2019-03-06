@@ -746,6 +746,9 @@ void selectDisk()
             {
                 endIndex = fileListCount + 1;
                 startIndex = endIndex - 12;
+                if(startIndex < 0){
+                    startIndex = 0;
+                }
             }
 
             for (int index = startIndex; index < endIndex + 1; index++)
@@ -774,14 +777,17 @@ void selectDisk()
             M5.Lcd.setTextColor(TFT_WHITE);
 
             M5.Lcd.drawRect(0, 240 - 19, 100, 18, TFT_WHITE);
-            M5.Lcd.setCursor(35, 240 - 17);
-            M5.Lcd.print("U P");
+            M5.Lcd.drawCentreString("U P", 53, 240 - 17, 1);
+            //M5.Lcd.setCursor(35, 240 - 17);
+            //M5.Lcd.print("U P");
             M5.Lcd.drawRect(110, 240 - 19, 100, 18, TFT_WHITE);
-            M5.Lcd.setCursor(125, 240 - 17);
-            M5.Lcd.print("SELECT");
+            M5.Lcd.drawCentreString("SELECT", 159, 240 - 17, 1);
+            //M5.Lcd.setCursor(125, 240 - 17);
+            //M5.Lcd.print("SELECT");
             M5.Lcd.drawRect(220, 240 - 19, 100, 18, TFT_WHITE);
-            M5.Lcd.setCursor(245, 240 - 17);
-            M5.Lcd.print("DOWN");
+            M5.Lcd.drawCentreString("DOWN", 266, 240 - 17, 1);
+            //M5.Lcd.setCursor(245, 240 - 17);
+            //M5.Lcd.print("DOWN");
             needRedraw = false;
         }
         M5.update();
@@ -880,16 +886,19 @@ void selectDiskImage()
     }
 
     M5.Lcd.drawRect(0, 240 - 19, 100, 18, TFT_WHITE);
-    M5.Lcd.setCursor(35, 240 - 17);
-    M5.Lcd.print(" 1 ");
+    M5.Lcd.drawCentreString("1", 53, 240 - 17, 1);
+    //M5.Lcd.setCursor(35, 240 - 17);
+    //M5.Lcd.print(" 1 ");
     M5.Lcd.drawRect(110, 240 - 19, 100, 18, TFT_WHITE);
-    M5.Lcd.setCursor(140, 240 - 17);
-    M5.Lcd.print(" 2 ");
+    M5.Lcd.drawCentreString("2", 159, 240 - 17, 1);
+    //M5.Lcd.setCursor(140, 240 - 17);
+    //M5.Lcd.print(" 2 ");
     if (imageCount >= 3)
     {
         M5.Lcd.drawRect(220, 240 - 19, 100, 18, TFT_WHITE);
-        M5.Lcd.setCursor(250, 240 - 17);
-        M5.Lcd.print(" 3 ");
+        M5.Lcd.drawCentreString("3", 266, 240 - 17, 1);
+        //M5.Lcd.setCursor(250, 240 - 17);
+        //M5.Lcd.print(" 3 ");
     }
 
     int drive1Image = 0;
