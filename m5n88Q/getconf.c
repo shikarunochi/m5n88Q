@@ -1523,7 +1523,7 @@ void config_exit(void)
 {
     if (save_config)
     {
-        config_save(NULL);
+        m5n88Q_config_save(NULL);
     }
 
     /* 設定ファイルのディレクトリ名などを後片づけ */
@@ -1862,7 +1862,7 @@ static void config_write(const char *opt_name, const char *opt_arg)
     osd_fputs(line, fp_config_write);
 }
 
-int config_save(const char *fname)
+int m5n88Q_config_save(const char *fname)
 {
     int i;
     signed char saved_option[OPT_GROUPS]; /* 設定出力済のグループ一覧 */

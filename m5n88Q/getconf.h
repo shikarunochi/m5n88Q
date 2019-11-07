@@ -123,6 +123,6 @@ int	config_init(int argc,
 		    void	(*osd_help)(void));
 void	config_exit(void);
 
-int	config_save(const char *fname);
+int	m5n88Q_config_save(const char *fname);
 
 #endif	/* GETCONF_H_INCLUDED */
