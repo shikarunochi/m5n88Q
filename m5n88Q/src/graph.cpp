@@ -5,6 +5,7 @@
  ************************************************************************/
 #pragma GCC optimize ("O3")
 #include<M5Stack.h>
+#define LGFX_USE_V0
 #include <LovyanGFX.hpp>
 extern "C"{
 #include <stdio.h>
