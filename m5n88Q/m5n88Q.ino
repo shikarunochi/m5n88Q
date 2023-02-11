@@ -14,7 +14,8 @@ void setup(){
      updateFromFS(SD);
      ESP.restart();
   }
-
+  M5.Speaker.begin(); 
+  M5.Speaker.mute();
   quasi88main();
 }
 
@@ -31,4 +32,3 @@ void M5SerialPrint(const char* logString){
 void M5SerialPrintHex(int value){
   Serial.print(value,HEX);
 }
-

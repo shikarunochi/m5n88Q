@@ -1609,7 +1609,7 @@ void	screen_update(void)
 	    if (screen_dirty_all == FALSE) {
 		if (! (grph_ctrl & GRPH_CTRL_VDISP)) {
 		    /* 非表示 */
-		    //memset(screen_dirty_flag, 0, sizeof(screen_dirty_flag) / 2);
+		  // memset(screen_dirty_flag, 0, sizeof(screen_dirty_flag) / 2);
 			memset(screen_dirty_flag, 0, 0x4000 / 2);
 		}
 		if (! (grph_ctrl & (GRPH_CTRL_COLOR|GRPH_CTRL_200))) {
@@ -1622,7 +1622,7 @@ void	screen_update(void)
 	    rect = vram2screen(screen_dirty_all ? V_ALL : V_DIF);
 	    text_attr_flipflop ^= 1;
 	    //memset(screen_dirty_flag, 0, sizeof(screen_dirty_flag));
-		memset(screen_dirty_flag, 0, 0x4000);
+		  memset(screen_dirty_flag, 0, 0x4000);
 	    screen_dirty_all = FALSE;
 	}
 	if (draw_finish) { (draw_finish)(); }	/* システム依存の描画後処理 */

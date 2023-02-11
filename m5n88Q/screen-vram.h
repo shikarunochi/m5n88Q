@@ -33,7 +33,7 @@ static	int	VRAM2SCREEN_DIFF(void)
     TYPE    tcol;				/* フォントの色		    */
     DIRTY_TYPE *up =
 	//(DIRTY_TYPE *) &screen_dirty_flag[0];	/* VRAM更新フラグへのポインタ*/
-	(DIRTY_TYPE *) screen_dirty_flag;	/* VRAM更新フラグへのポインタ*/
+    (DIRTY_TYPE *) screen_dirty_flag;	/* VRAM更新フラグへのポインタ*/
     bit32 *src = main_vram4;			/* VRAMへのポインタ	     */
     DST_DEFINE()				/* 描画エリアへのポインタ    */
     WORK_DEFINE()				/* 処理に必要なワーク	     */

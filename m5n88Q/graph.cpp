@@ -3,23 +3,26 @@
  *
  *	詳細は、 graph.h 参照
  ************************************************************************/
+#pragma GCC optimize ("O3")
 #include<M5Stack.h>
+#include <LovyanGFX.hpp>
 extern "C"{
 #include <stdio.h>
 #include <stdlib.h>
-
 #include "quasi88.h"
-#include "graph.h"
 #include "device.h"
+#include "graph.h"
 }
-
 
 static	T_GRAPH_SPEC	graph_spec;		/* 基本情報		*/
 
 static	int		graph_exist;		/* 真で、画面生成済み	*/
 static	T_GRAPH_INFO	graph_info;		/* その時の、画面情報	*/
 
-static TFT_eSprite fb = TFT_eSprite(&M5.Lcd);
+static LGFX lcd;
+
+uint8_t needDrawUpdateFlag;
+uint8_t nowDrawingFlag;
 
 /************************************************************************
  *	グラフィック処理の初期化
@@ -32,11 +35,10 @@ const T_GRAPH_SPEC	*graph_init(void)
     if (verbose_proc) {
 	printf("Initializing Graphic System ... ");
     }
-    
-    fb.setColorDepth(8);
-    fb.createSprite(320, 240);
-    fb.fillSprite(TFT_BLACK);
-    fb.pushSprite(0, 0);
+    lcd.init();
+
+    lcd.setSwapBytes(true); // バイト順変換を有効にする。
+    lcd.fillScreen(TFT_BLACK);
 
     //graph_spec.window_max_width      = 640;
     //graph_spec.window_max_height     = 400;
@@ -53,6 +55,10 @@ const T_GRAPH_SPEC	*graph_init(void)
 
     if (verbose_proc)
 	printf("OK\n");
+
+   needDrawUpdateFlag = FALSE;
+   nowDrawingFlag = FALSE;
+    xTaskCreatePinnedToCore(graph_updae_thread, "graph_updae_thread", 8192, NULL, 1, NULL, 0);
 
     return &graph_spec;
 }
@@ -130,9 +136,17 @@ void	graph_add_color(const PC88_PALETTE_T color[],
 	//pixel[i] = ((((unsigned long) color[i].red   >> 3) << 10) |
 	//   	    (((unsigned long) color[i].green >> 3) <<  5) |
 	//  	    (((unsigned long) color[i].blue  >> 3)));
-	pixel[i] = ((((unsigned long) color[i].red  & 0xF8) << 8) |
-	   	    (((unsigned long) color[i].green & 0xFC) <<  3) |
-	  	    (((unsigned long) color[i].blue & 0xF8) >> 3));
+
+//RGB565 
+//	pixel[i] = ((((unsigned long) color[i].red  & 0xF8) << 8) | //11111000
+//  	   	    (((unsigned long) color[i].green & 0xFC) <<  3) | //11111100
+//	  	    (((unsigned long) color[i].blue & 0xF8) >> 3));     //11111000
+
+//RGB332
+  pixel[i] = ((((unsigned long) color[i].red  & 0xE0) ) | //11100000
+            (((unsigned long) color[i].green & 0xE0) >>  3) | //11100000
+          (((unsigned long) color[i].blue & 0xC0) >> 6));     //11000000
+ 
 /*    Serial.print("pixelRed=");
     Serial.println((unsigned long) color[i].red,HEX);    
     Serial.print("pixelGreen=");
@@ -156,24 +170,88 @@ void	graph_remove_color(int nr_pixel, unsigned long pixel[])
 /************************************************************************
  *	グラフィックの更新
  ************************************************************************/
+//グラフィックの更新は別スレッドで行う。
+
+void graph_updae_thread(void *pvParameters){
+  while(1){
+    if(needDrawUpdateFlag == TRUE){
+      nowDrawingFlag = TRUE;
+       lcd.pushImageRotateZoom
+        ( 160  // 描画先の中心座標X
+        , 120  // 描画先の中心座標Y
+        , 320  // 画像の中心座標X
+        , 120  // 画像の中心座標Y
+        , 0              // 回転角度
+        , 0.5                // X方向の描画倍率 (マイナス指定で反転可能)
+        , 1                // Y方向の描画倍率 (マイナス指定で反転可能)
+        , 640        // 画像データの幅
+        , 220       // 画像データの高さ
+        , buffer             // 画像データのポインタ
+        );
+        nowDrawingFlag = FALSE;
+        needDrawUpdateFlag = FALSE;
+    }
+    delay(10);
+  }
+}
+
+void waitDrawing(){
+  while(nowDrawingFlag == TRUE){
+    delay(10);    
+  }
+  return;
+}
 
 void	graph_update(int nr_rect, T_GRAPH_RECT rect[])
 {
+  needDrawUpdateFlag = TRUE;
+  /*
+     lcd.pushImageRotateZoom
+      ( 160  // 描画先の中心座標X
+      , 120  // 描画先の中心座標Y
+      , 320  // 画像の中心座標X
+      , 120  // 画像の中心座標Y
+      , 0              // 回転角度
+      , 0.5                // X方向の描画倍率 (マイナス指定で反転可能)
+      , 1                // Y方向の描画倍率 (マイナス指定で反転可能)
+      , 640        // 画像データの幅
+      , 220       // 画像データの高さ
+      , buffer             // 画像データのポインタ
+      );
+    */  
+/*    
     for (int i=0; i<nr_rect; i++) {
         int x = rect[i].x;
         int y = rect[i].y;
         int w = rect[i].width;
         int h = rect[i].height;
-        fb.drawRect(x, y, w, h, TFT_BLACK);
-        for(int yPos = y;yPos < y + h;yPos++){
-            for(int xPos = x;xPos < x + w;xPos++){
-                if(xPos >= 320){break;}  
-                fb.drawPixel(xPos, yPos, *(buffer + yPos * 640 + xPos*2) | *(buffer + yPos * 640 + xPos*2 + 1)<<8);    
-            }
-            if(yPos >= 240){break;}  
-        }
+
+     lcd.pushImageRotateZoom
+      ( (x+w) >> 2  // 描画先の中心座標X
+      , (y+h) >> 1  // 描画先の中心座標Y
+      , (x+w) >> 1  // 画像の中心座標X
+      , (y+h) >> 1  // 画像の中心座標Y
+      , 0              // 回転角度
+      , 0.5                // X方向の描画倍率 (マイナス指定で反転可能)
+      , 1                // Y方向の描画倍率 (マイナス指定で反転可能)
+      , w        // 画像データの幅
+      , h       // 画像データの高さ
+      , buffer             // 画像データのポインタ
+      );
+
+      //  
+      //  fb.drawRect(x, y, w, h, TFT_BLACK);
+      //  for(int yPos = y;yPos < y + h;yPos++){
+      //      for(int xPos = x;xPos < x + w;xPos++){
+      //          if(xPos >= 320){break;}  
+      //          fb.drawPixel(xPos, yPos, *(buffer + yPos * 640 + xPos*2) | *(buffer + yPos * 640 + xPos*2 + 1)<<8);    
+      //      }
+      //      if(yPos >= 240){break;}  
+      //  }
     }
-    fb.pushSprite(0, 0);
+    lcd.display();
+    //fb.pushSprite(0, 0);
+    */
 }
 
 

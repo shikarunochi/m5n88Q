@@ -15,6 +15,7 @@ extern "C"
 {
 #include "keyboard.h"
 #include "drive.h"
+#include "graph.h"
 }
 
 /*----------------------------------------------------------------------
@@ -465,6 +466,7 @@ void checkKeyboard()
 // I2C Keyboard Logic
 //--------------------------------------------------------------
 #define CARDKB_ADDR 0x5F
+#define FACES_KEYBOARD_I2C_ADDR 0x08
 void checkI2cKeyboard()
 {
     int i2cKeyCode = 0;
@@ -476,6 +478,36 @@ void checkI2cKeyboard()
             break;
         }
     }
+
+    if (Wire.requestFrom(FACES_KEYBOARD_I2C_ADDR, 1))
+    { // request 1 byte from keyboard
+        while (Wire.available())
+        {
+            i2cKeyCode = Wire.read(); // receive a byte as
+            switch(i2cKeyCode){
+            //カーソルキーコードを CardKBに合わせる。
+            case 183: i2cKeyCode = 181;break;//Fn+K -> UP
+            case 191: i2cKeyCode = 180;break;//Fn+N -> LEFT
+            case 192: i2cKeyCode = 182;break;//Fn+M -> DOWN
+            case 193: i2cKeyCode = 183 ;break;//Fn+$ -> RIGHT
+            //ALT+ K/N/M/$ をカーソル扱いにする。
+            case 161: i2cKeyCode = 181;break;//ALT+K -> UP
+            case 170: i2cKeyCode = 180;break;//ALT+N -> LEFT
+            case 171: i2cKeyCode = 182;break;//ALT+M -> DOWN
+            case 172: i2cKeyCode = 183;break;//ALT+$ -> RIGHT
+            
+            case 144: i2cKeyCode = 128;break;//ALT+Q -> Fn+ESC -> SHIFT+STOP
+            case 145: i2cKeyCode = 0x81;break; //ALT+W -> Fn+1 -> F1
+            case 146: i2cKeyCode = 0x82;break; //ALT+E -> Fn+2 -> F2
+            case 147: i2cKeyCode = 0x83;break; //ALT+R -> Fn+3 -> F3
+            case 148: i2cKeyCode = 0x84;break; //ALT+T -> Fn+4 -> F4
+            case 149: i2cKeyCode = 0x85;break; //ALT+Y -> Fn+5 -> F5 
+            case 163: i2cKeyCode = 0x8B;break; //ALT+BS -> Fn+BS -> カナ
+            }
+            break;
+        }
+    }
+
     //Serial.println(i2cKeyCode,HEX);
 
     //特殊キー
@@ -836,7 +868,9 @@ void selectDisk()
 
                 if (curDiskFile.compareTo(fileList[selectIndex - 2]) != 0)
                 { //変更されている場合のみセット
+                    delay(10);
                     quasi88_disk_eject_all();
+                    delay(10);
                     const char *cFileName = (diskDir + "/" + fileList[selectIndex - 2]).c_str();
                     //if(quasi88_disk_insert(DRIVE_1, cFileName, 0, false) == true){
                     if (quasi88_disk_insert_all(cFileName, false) == true)
@@ -1091,6 +1125,7 @@ void systemMenu()
             M5.Lcd.print("MODE : ");
             M5.Lcd.print(basicMode);
             delay(1000);
+            M5.Lcd.fillScreen(TFT_BLACK);
             quasi88_reset(&cfg);
             return;
         }

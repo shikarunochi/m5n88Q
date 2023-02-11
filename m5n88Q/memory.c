@@ -143,6 +143,16 @@ static	void	*mem_alloc( size_t size )		/* メモリ確保 */
   return ptr;
 }
 
+static  void  *mem_alloc_main_memory( size_t size )   /* PSRAMを使わずメモリ確保 */
+{
+  void  *ptr = malloc( size );
+
+  if( ptr == NULL ){ 
+    mem_alloc_result = FALSE;
+  }
+  return ptr;
+}
+
 static	int	mem_alloc_finish( void )		/* メモリ確保完了(偽で失敗) */
 {
   if( verbose_proc ){ 
@@ -325,8 +335,8 @@ int	memory_allocate( void )
     main_rom_n   = (byte *)           mem_alloc( sizeof(byte) *  0x8000 );
     sub_romram   = (byte *)           mem_alloc( sizeof(byte) *  0x8000 );
 
-    main_ram     = (byte *)           mem_alloc( sizeof(byte) * 0x10000 );
-    main_high_ram= (byte *)           mem_alloc( sizeof(byte) *  0x1000 );
+    main_ram     = (byte *)           mem_alloc_main_memory( sizeof(byte) * 0x10000 );
+    main_high_ram= (byte *)           mem_alloc_main_memory( sizeof(byte) *  0x1000 );
     main_vram    = (byte(*)[0x4])     mem_alloc( sizeof(byte) *  0x4000 *4 );
 
     kanji_rom    = (byte(*)[65536][2])mem_alloc( sizeof(byte)*2*65536*2 );

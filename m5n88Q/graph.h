@@ -279,7 +279,10 @@ typedef struct {
 
 void	graph_update(int nr_rect, T_GRAPH_RECT rect[]);
 
+void graph_updae_thread(void *pvParameters);
 
+
+void waitDrawing();
 
 /***********************************************************************
  * 属性の設定

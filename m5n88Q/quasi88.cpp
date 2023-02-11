@@ -152,6 +152,8 @@ void quasi88_start(void)
 	debuglog_init();
 	profiler_init();
 	emu_breakpoint_init();
+	quasi88_disk_eject_all();
+  //drawEnable();
 	if (verbose_proc)
 		printf("Running QUASI88...\n");
 	Serial.println("Running QUASI88...");

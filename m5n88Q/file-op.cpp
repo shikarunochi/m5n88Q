@@ -11,7 +11,10 @@
 #include "quasi88.h"
 #include "file-op.h"
 #include "initval.h"
-
+extern "C"
+{
+#include "graph.h"
+}
 /*****************************************************************************/
 
 static char *dir_cwd;	/* デフォルトのディレクトリ (カレント)		*/
@@ -126,6 +129,7 @@ void initialize(){
 
 OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
 {
+  waitDrawing();
     int i;
     OSD_FILE	*st;
 
@@ -211,6 +215,7 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
 
 int	osd_fclose(OSD_FILE *stream)
 {
+  waitDrawing();
     stream->sdFile.close();
   	stream->useFlag = false;
    	if (stream->path) {
@@ -224,6 +229,7 @@ int	osd_fclose(OSD_FILE *stream)
 
 int	osd_fflush(OSD_FILE *stream)
 {
+  waitDrawing();
     if (stream == NULL) return fflush(NULL);
     stream->sdFile.flush();
     return EOF;
@@ -233,6 +239,7 @@ int	osd_fflush(OSD_FILE *stream)
 
 int	osd_fseek(OSD_FILE *stream, long offset, int whence)
 {
+  waitDrawing();
     SeekMode seekMode;
     if(whence == SEEK_END){
         seekMode = SeekEnd;
@@ -250,18 +257,21 @@ int	osd_fseek(OSD_FILE *stream, long offset, int whence)
 
 long	osd_ftell(OSD_FILE *stream)
 {
+  waitDrawing();
     return stream->sdFile.position();  
 }
 
 
 void	osd_rewind(OSD_FILE *stream)
 {
+  waitDrawing();
     (void)osd_fseek(stream, 0L, SEEK_SET);
     osd_fflush(stream);
 }
 
 size_t	osd_fread(void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
 {
+  waitDrawing();
     size_t readByte = 0;
     if(stream->sdFile.available()){
       readByte = stream->sdFile.read((byte*)ptr, nobj);
@@ -274,6 +284,7 @@ size_t	osd_fread(void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
 
 size_t	osd_fwrite(const void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
 {
+  waitDrawing();
     int writeByte = stream->sdFile.write((byte*)ptr, size * nobj);
     //Serial.printf("size:%d  nobj:%d retSize:%d", size, nobj, writeByte);
     return writeByte / size;
@@ -281,12 +292,14 @@ size_t	osd_fwrite(const void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
 
 int	osd_fputc(int c, OSD_FILE *stream)
 {
+  waitDrawing();
     return stream->sdFile.write(c);
 }
 
 
 int	osd_fgetc(OSD_FILE *stream)
 {
+  waitDrawing();
     uint8_t readData;
     if(stream->sdFile.available()){
       stream->sdFile.read(&readData, 1);
@@ -298,7 +311,7 @@ int	osd_fgetc(OSD_FILE *stream)
 
 char *osd_fgets(char *str, int size, OSD_FILE *stream)
 {
-    
+    waitDrawing();
     if(stream->sdFile.available()){
 	    stream->sdFile.readBytes(str, size);
         return str;
@@ -309,6 +322,7 @@ char *osd_fgets(char *str, int size, OSD_FILE *stream)
 
 int	osd_fputs(const char *str, OSD_FILE *stream)
 {
+    waitDrawing();
     int length = strnlen(str, 1024);
    	return stream->sdFile.write((uint8_t*)str, length); 
 }
@@ -410,6 +424,7 @@ int	osd_path_join(const char *dir, const char *file, char path[], int size)
 
 int	osd_file_stat(const char *pathname)
 {
+  waitDrawing();
     FILE *fp;
 
     if ((fp = fopen(pathname, "r"))) {	/* ファイルとして開く	*/
