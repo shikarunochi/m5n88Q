@@ -5,8 +5,10 @@
  ************************************************************************/
 #pragma GCC optimize ("O3")
 #include<M5Stack.h>
-#define LGFX_USE_V0
+#define LGFX_AUTODETECT
+#define LGFX_USE_V1
 #include <LovyanGFX.hpp>
+#include <LGFX_AUTODETECT.hpp> 
 extern "C"{
 #include <stdio.h>
 #include <stdlib.h>
