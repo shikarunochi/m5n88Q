@@ -278,6 +278,7 @@ typedef struct {
 } T_GRAPH_RECT;
 
 void	graph_update(int nr_rect, T_GRAPH_RECT rect[]);
+void	graph_updateDrawFlag();
 
 void graph_updae_thread(void *pvParameters);
 

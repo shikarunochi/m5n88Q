@@ -205,6 +205,10 @@ void waitDrawing(){
   return;
 }
 
+void graph_updateDrawFlag(){
+  needDrawUpdateFlag = TRUE;
+}
+
 void	graph_update(int nr_rect, T_GRAPH_RECT rect[])
 {
   needDrawUpdateFlag = TRUE;

@@ -857,6 +857,7 @@ void selectDisk()
                 //何もせず戻る
                 M5.Lcd.fillScreen(TFT_BLACK);
                 delay(10);
+                graph_updateDrawFlag();
                 return;
             }
             else if (selectIndex == 1)
@@ -906,6 +907,7 @@ void selectDisk()
             delay(2000);
             M5.Lcd.fillScreen(TFT_BLACK);
             delay(10);
+            graph_updateDrawFlag();
             return;
         }
         if(M5.BtnB.pressedFor(500) && longPressB ==false){
@@ -1132,6 +1134,7 @@ void systemMenu()
             {
                 M5.Lcd.fillScreen(TFT_BLACK);
                 delay(10);
+                graph_updateDrawFlag();
                 return;
             }
 
@@ -1159,6 +1162,7 @@ void systemMenu()
             default:
                 M5.Lcd.fillScreen(TFT_BLACK);
                 delay(10);
+                graph_updateDrawFlag();
                 return;
             }
             M5.Lcd.fillScreen(TFT_BLACK);
@@ -1169,6 +1173,7 @@ void systemMenu()
             delay(1000);
             M5.Lcd.fillScreen(TFT_BLACK);
             quasi88_reset(&cfg);
+            graph_updateDrawFlag();
             return;
         }
         delay(100);
