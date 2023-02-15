@@ -927,7 +927,6 @@ void selectDiskImage(int driveIndex)
     boolean needUpdate = true;
     boolean longPressB = false;
     int selectIndex = 0;
-
     while (true)
     {        
         if(needUpdate){
@@ -941,10 +940,14 @@ void selectDiskImage(int driveIndex)
                     M5.Lcd.setTextColor(TFT_GREEN);
                 }
                 M5.Lcd.printf("%d :", imageIndex + 1);
-                M5.Lcd.println(drive[0].image[imageIndex].name);
+                M5.Lcd.println(drive[driveIndex].image[imageIndex].name);
             }
             M5.Lcd.setTextColor(TFT_WHITE);
-            M5.Lcd.drawString("LONG PRESS:SET Drive 1&2",0,200);
+            if(driveIndex == 0){
+                M5.Lcd.drawString("LONG PRESS:SET Drive 1&2",0,200);
+            }else{
+                M5.Lcd.drawString("LONG PRESS:SET Drive 2&1",0,200);
+            }
             M5.Lcd.drawRect(0, 240 - 19, 100, 18, TFT_WHITE);
             M5.Lcd.drawCentreString("UP", 53, 240 - 17, 1);
             M5.Lcd.drawRect(110, 240 - 19, 100, 18, TFT_WHITE);
@@ -1015,6 +1018,7 @@ void selectDiskImage(int driveIndex)
     M5.Lcd.fillScreen(TFT_BLACK);
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.println("Set Disk Image");
+    
     for (int driveIndex = 0; driveIndex < 2; driveIndex++)
     {
         M5.Lcd.printf("DRIVE %d:", driveIndex + 1);
