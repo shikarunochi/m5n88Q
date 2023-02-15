@@ -279,8 +279,9 @@ typedef struct {
 
 void	graph_update(int nr_rect, T_GRAPH_RECT rect[]);
 void	graph_updateDrawFlag();
+void    graph_updateStop();
 
-void graph_updae_thread(void *pvParameters);
+void graph_update_thread(void *pvParameters);
 
 
 void waitDrawing();
