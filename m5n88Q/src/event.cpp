@@ -359,7 +359,7 @@ void checkI2cKeyboard();
 void checkSerialKeyboard();
 void keyPress(int keyCode);
 void selectDisk();
-void selectDiskImage();
+void selectDiskImage(int driveIndex);
 void systemMenu();
 void sortList(String fileList[], int fileListCount); 
 
@@ -744,6 +744,7 @@ void selectDisk()
     sortList(fileList, fileListCount);
 
     boolean needRedraw = true;
+    boolean longPressB = false;
     int selectIndex = 0;
     String curDiskFile = String(file_disk[0]);
     curDiskFile = curDiskFile.substring(curDiskFile.lastIndexOf("/") + 1);
@@ -813,7 +814,13 @@ void selectDisk()
             //M5.Lcd.setCursor(35, 240 - 17);
             //M5.Lcd.print("U P");
             M5.Lcd.drawRect(110, 240 - 19, 100, 18, TFT_WHITE);
-            M5.Lcd.drawCentreString("SELECT", 159, 240 - 17, 1);
+            if(longPressB == false){
+                M5.Lcd.drawCentreString("Drive:1", 159, 240 - 17, 1);
+            }else{
+                M5.Lcd.setTextColor(TFT_RED);
+                M5.Lcd.drawCentreString("Drive:2", 159, 240 - 17, 1);
+                M5.Lcd.setTextColor(TFT_WHITE);
+            }
             //M5.Lcd.setCursor(125, 240 - 17);
             //M5.Lcd.print("SELECT");
             M5.Lcd.drawRect(220, 240 - 19, 100, 18, TFT_WHITE);
@@ -865,32 +872,35 @@ void selectDisk()
                 //Set Disk
                 M5.Lcd.fillScreen(TFT_BLACK);
                 M5.Lcd.setCursor(0, 0);
-
-                if (curDiskFile.compareTo(fileList[selectIndex - 2]) != 0)
-                { //変更されている場合のみセット
+                int driveIndex = (longPressB==false)?DRIVE_1:DRIVE_2;
+                //if (curDiskFile.compareTo(fileList[selectIndex - 2]) != 0)
+                //{ //変更されている場合のみセット
                     delay(10);
-                    quasi88_disk_eject_all();
-                    delay(10);
-                    const char *cFileName = (diskDir + "/" + fileList[selectIndex - 2]).c_str();
-                    //if(quasi88_disk_insert(DRIVE_1, cFileName, 0, false) == true){
-                    if (quasi88_disk_insert_all(cFileName, false) == true)
+                    //quasi88_disk_eject_all();
+                    //delay(10);
+                    String fileName = diskDir + "/" + fileList[selectIndex - 2];
+                    const char *cFileName = fileName.c_str();
+                    if(quasi88_disk_insert(driveIndex, cFileName, 0, false) == true)
+                    //if (quasi88_disk_insert_all(cFileName, false) == true) //DRIVE1とDRIVER2
                     {
-                        M5.Lcd.print("Set Disk:");
+                        M5.Lcd.print("Set Disk Image\nDrive:");
+                        M5.Lcd.print((longPressB==false)?"1":"2");
+                        M5.Lcd.println("");
                     }
                     else
                     {
                         M5.Lcd.print("Set Disk FAIL!:");
                     }
-                }
-                else
-                {
-                    M5.Lcd.print("Not Change:");
-                }
+                //}
+                //else
+               // {
+               //    M5.Lcd.print("Not Change:");
+               //}
                 M5.Lcd.println(fileList[selectIndex -2]);
                 //イメージが複数ある場合、イメージのセレクト
-                if (disk_image_num(0) > 1)
+                if (disk_image_num(driveIndex) > 1)
                 {
-                    selectDiskImage();
+                    selectDiskImage(driveIndex);
                 }
             }
             delay(2000);
@@ -898,82 +908,110 @@ void selectDisk()
             delay(10);
             return;
         }
+        if(M5.BtnB.pressedFor(500) && longPressB ==false){
+            longPressB = true;
+            needRedraw = true;
+        }
         delay(100);
     }
 }
 
-void selectDiskImage()
+void selectDiskImage(int driveIndex)
 {
-    if (disk_image_exist(0) == false)
+    if (disk_image_exist(driveIndex) == false)
     {
         return;
     }
-    int imageCount = disk_image_num(0);
-    M5.Lcd.fillScreen(TFT_BLACK);
-    M5.Lcd.setCursor(0, 0);
-    M5.Lcd.setTextColor(TFT_WHITE);
-    M5.lcd.println("Select Drive:1");
-    for (int imageIndex = 0; imageIndex < imageCount; imageIndex++)
-    {
-        M5.Lcd.printf("%d :", imageIndex + 1);
-        M5.Lcd.println(drive[0].image[imageIndex].name);
-    }
+    int imageCount = disk_image_num(driveIndex);
 
-    M5.Lcd.drawRect(0, 240 - 19, 100, 18, TFT_WHITE);
-    M5.Lcd.drawCentreString("1", 53, 240 - 17, 1);
-    //M5.Lcd.setCursor(35, 240 - 17);
-    //M5.Lcd.print(" 1 ");
-    M5.Lcd.drawRect(110, 240 - 19, 100, 18, TFT_WHITE);
-    M5.Lcd.drawCentreString("2", 159, 240 - 17, 1);
-    //M5.Lcd.setCursor(140, 240 - 17);
-    //M5.Lcd.print(" 2 ");
-    if (imageCount >= 3)
-    {
-        M5.Lcd.drawRect(220, 240 - 19, 100, 18, TFT_WHITE);
-        M5.Lcd.drawCentreString("3", 266, 240 - 17, 1);
-        //M5.Lcd.setCursor(250, 240 - 17);
-        //M5.Lcd.print(" 3 ");
-    }
+    boolean needUpdate = true;
+    boolean longPressB = false;
+    int selectIndex = 0;
 
-    int drive1Image = 0;
-    int drive2Image = 0;
     while (true)
     {        
+        if(needUpdate){
+            M5.Lcd.fillScreen(TFT_BLACK);
+            M5.Lcd.setCursor(0, 0);
+            M5.Lcd.setTextColor(TFT_WHITE);
+            for (int imageIndex = 0; imageIndex < imageCount; imageIndex++)
+            {
+                M5.Lcd.setTextColor(TFT_WHITE);
+                if(selectIndex == imageIndex){
+                    M5.Lcd.setTextColor(TFT_GREEN);
+                }
+                M5.Lcd.printf("%d :", imageIndex + 1);
+                M5.Lcd.println(drive[0].image[imageIndex].name);
+            }
+            M5.Lcd.setTextColor(TFT_WHITE);
+            M5.Lcd.drawString("LONG PRESS:SET Drive 1&2",0,200);
+            M5.Lcd.drawRect(0, 240 - 19, 100, 18, TFT_WHITE);
+            M5.Lcd.drawCentreString("UP", 53, 240 - 17, 1);
+            M5.Lcd.drawRect(110, 240 - 19, 100, 18, TFT_WHITE);
+            if(driveIndex == 0){
+                if(longPressB == false){
+                    M5.Lcd.drawCentreString("Drive:1", 159, 240 - 17, 1);
+                }else{
+                    M5.Lcd.setTextColor(TFT_RED);
+                    M5.Lcd.drawCentreString("1 & 2", 159, 240 - 17, 1);
+                }
+            }else{
+                if(longPressB == false){
+                    M5.Lcd.drawCentreString("Drive:2", 159, 240 - 17, 1);
+                }else{
+                    M5.Lcd.setTextColor(TFT_RED);
+                    M5.Lcd.drawCentreString("2 & 1", 159, 240 - 17, 1);
+                }
+            }
+            M5.Lcd.setTextColor(TFT_WHITE);
+            M5.Lcd.drawRect(220, 240 - 19, 100, 18, TFT_WHITE);
+            M5.Lcd.drawCentreString("DOWN", 266, 240 - 17, 1);
+            needUpdate = false;
+        }
+
+
         M5.update();
         if (M5.BtnA.wasReleased())
         {
-            drive1Image = 0;
-            drive2Image = 1;
-            break;
+            selectIndex = selectIndex - 1;
+            if(selectIndex < 0){
+                selectIndex = imageCount - 1;
+            }
+            needUpdate = true;
         }
         if (M5.BtnB.wasReleased())
         {
-            drive1Image = 1;
-            if (imageCount >= 3)
-            {
-                drive2Image = 2;
-            }
-            else
-            {
-                drive2Image = 0;
+            quasi88_disk_image_select(driveIndex, selectIndex);    
+            if(longPressB == true){
+                int anotherIndex = selectIndex + 1;
+                if(anotherIndex  >= imageCount ){
+                    anotherIndex = 0;
+                }
+                int src = 0;
+                int dst = 1;
+                if(driveIndex == 1){
+                    src = 1;
+                    dst = 0;
+                }
+                quasi88_disk_insert_A_to_B(src,dst,anotherIndex);
             }
             break;
         }
+        if (M5.BtnB.pressedFor(500)&&longPressB==false){
+            longPressB = true;
+            needUpdate = true;
+        }
         if (M5.BtnC.wasReleased())
         {
-            if (imageCount >= 3)
-            {
-                drive1Image = 2;
-                drive2Image = 0;
-                break;
+            selectIndex = selectIndex + 1;
+            if(selectIndex >= imageCount ){
+                selectIndex = 0;
             }
+            needUpdate = true;
         }
         delay(100);
     }
     
-    quasi88_disk_image_select(0, drive1Image);
-    quasi88_disk_image_select(1, drive2Image);
-
     M5.Lcd.fillScreen(TFT_BLACK);
     M5.Lcd.setCursor(0, 0);
     M5.Lcd.println("Set Disk Image");

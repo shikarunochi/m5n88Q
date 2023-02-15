@@ -539,7 +539,6 @@ int disk_insert(int drv, const char *filename, int img, int readonly)
   */
 
   /* "r+b" でファイルを開く。だめなら "rb" でファイルを開く */
-
   if (open_as_readonly == FALSE)
   {
     drive[drv].fp = osd_fopen(FTYPE_DISK, filename, "r+b");

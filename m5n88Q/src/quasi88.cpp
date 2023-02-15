@@ -1056,17 +1056,19 @@ int quasi88_disk_insert_all(const char *filename, int ro)
 int quasi88_disk_insert(int drv, const char *filename, int image, int ro)
 {
 	int success = FALSE;
-
 	quasi88_disk_eject(drv);
 
 	if (strlen(filename) < QUASI88_MAX_FILENAME)
 	{
-
-		if (disk_insert(drv, filename, image, ro) == 0)
+		if (disk_insert(drv, filename, image, ro) == 0){
 			success = TRUE;
+		}
 		else
+		{
 			success = FALSE;
+		}
 
+		
 		if (success)
 		{
 

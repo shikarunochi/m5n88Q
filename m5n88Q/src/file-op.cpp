@@ -140,7 +140,10 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
 	        break;
 	    }
     }
-    if (st == NULL) return NULL;		/* 空きがなければ NG */
+
+    if (st == NULL){
+        return NULL;		/* 空きがなければ NG */
+    }
     st->path = NULL;
 
     switch (type) {
@@ -164,6 +167,7 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
 			            strcmp(osd_stream[i].mode, mode) == 0) {
                			return &osd_stream[i];
         		    } else {
+                        Serial.println("4");
 		            	/* DISK以外、ないしモードが違うならばNG */
 			            return NULL;
 		            }
@@ -181,14 +185,15 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
         default:
             Serial.print("Path:");
             Serial.println(path);
+            String stringPath = String(path);
             if(strchr(mode,'+')!=0){
-                st->sdFile = SD.open(String(path), "r+");
+                st->sdFile = SD.open(stringPath, "r+");
             }else if(strchr(mode,'a')!=0){
-                st->sdFile = SD.open(String(path), FILE_APPEND);
+                st->sdFile = SD.open(stringPath, FILE_APPEND);
             }else if(strchr(mode,'w')!=0){
-                st->sdFile = SD.open(String(path), FILE_WRITE);
+                st->sdFile = SD.open(stringPath, FILE_WRITE);
             }else{
-                st->sdFile = SD.open(String(path), FILE_READ);
+                st->sdFile = SD.open(stringPath, FILE_READ);
             }
 	        if (st->sdFile) {
         	    st->type = type;
