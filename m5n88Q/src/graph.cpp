@@ -26,7 +26,6 @@ static LGFX lcd;
 
 uint8_t needDrawUpdateFlag;
 uint8_t nowDrawingFlag;
-uint8_t stopDrawUpdateFlag;
 
 /************************************************************************
  *	グラフィック処理の初期化
@@ -62,8 +61,7 @@ const T_GRAPH_SPEC	*graph_init(void)
 
    needDrawUpdateFlag = FALSE;
    nowDrawingFlag = FALSE;
-   stopDrawUpdateFlag = FALSE;
-    xTaskCreatePinnedToCore(graph_update_thread, "graph_update_thread", 8192, NULL, 1, NULL, 0);
+   xTaskCreatePinnedToCore(graph_update_thread, "graph_update_thread", 8192, NULL, 1, NULL, 0);
 
     return &graph_spec;
 }
@@ -179,11 +177,8 @@ void	graph_remove_color(int nr_pixel, unsigned long pixel[])
 
 void graph_update_thread(void *pvParameters){
   while(1){
-    static unsigned long wait_millis = 10000;
-    static unsigned long prev_update = millis();
+
     if(needDrawUpdateFlag == TRUE){
-      wait_millis = 1000;
-      prev_update = millis();
       nowDrawingFlag = TRUE;
        lcd.pushImageRotateZoom
         ( 160  // 描画先の中心座標X
@@ -199,11 +194,7 @@ void graph_update_thread(void *pvParameters){
         );
         nowDrawingFlag = FALSE;
         needDrawUpdateFlag = FALSE;
-    } else {
-      if(millis() - prev_update > wait_millis && stopDrawUpdateFlag == FALSE){
-        needDrawUpdateFlag = TRUE;
-      }
-    }
+    } 
     delay(10);
   }
 }
@@ -215,12 +206,7 @@ void waitDrawing(){
   return;
 }
 
-void graph_updateStop(){ //メニューに入るとき呼ぶ
-  stopDrawUpdateFlag = TRUE;
-}
-
 void graph_updateDrawFlag(){ //メニューから出るとき呼ぶ
-  stopDrawUpdateFlag = FALSE;
   needDrawUpdateFlag = TRUE;
 }
 

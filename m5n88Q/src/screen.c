@@ -1673,22 +1673,25 @@ void	screen_update(void)
 	profiler_lapse( PROF_LAPSE_VIDEO );
     }
 
-    if (all_area) {
 	put_image_all();
-	drawn_count ++;
 
+/*
+	if (all_area) {
+		put_image_all();
+		drawn_count ++;
     } else {
-	if (rect != -1) {
-	    put_image(((rect >> 24)       ) * 8, ((rect >> 16) & 0xff) * 2,
-		      ((rect >>  8) & 0xff) * 8, ((rect      ) & 0xff) * 2,
-		      (flag & 1), (flag & 2), (flag & 4));
-	    drawn_count ++;
-	}
-	else if (flag) {
-	    put_image(-1, -1, -1, -1,
-		      (flag & 1), (flag & 2), (flag & 4));
-	}
+		if (rect != -1) {
+	    	put_image(((rect >> 24)       ) * 8, ((rect >> 16) & 0xff) * 2,
+		    	  ((rect >>  8) & 0xff) * 8, ((rect      ) & 0xff) * 2,
+		      	(flag & 1), (flag & 2), (flag & 4));
+	    	drawn_count ++;
+		}
+		else if (flag) {
+		    put_image(-1, -1, -1, -1,
+		      	(flag & 1), (flag & 2), (flag & 4));
+		}
     }
+*/
 	//check_print();
 }
 

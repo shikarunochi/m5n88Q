@@ -385,12 +385,10 @@ void event_update(void)
     M5.update();
     if (M5.BtnB.wasReleased())
     {
-        graph_updateStop();
         selectDisk();
     }
     if (M5.BtnC.wasReleased())
     {
-        graph_updateStop();
         systemMenu();
     }
     checkKeyboard();
