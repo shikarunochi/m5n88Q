@@ -4,7 +4,13 @@
 /*									*/
 /************************************************************************/
 
+#ifdef _CORES3
+#include <M5Unified.h>
+#elif defined _ATOMS3R
+#include <M5GFX.h>
+#else
 #include <M5Stack.h>
+#endif
 extern "C" {
 #include <stdio.h>
 #include <stdlib.h>

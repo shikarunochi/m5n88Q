@@ -3,7 +3,165 @@
  *
  *	詳細は、 event.h 参照
  ************************************************************************/
+#ifdef _CORES3
+#include <SD.h>
+#include <SPIFFS.h>
+#include <M5Unified.h>
+#include <Wire.h>
+//USBキーボード
+//https://github.com/touchgadget/esp32-usb-host-demos
+#include <elapsedMillis.h>
+#include <usb/usb_host.h>
+#include "usbhhelp.hpp"
+bool isKeyboard = false;
+bool isKeyboardReady = false;
+uint8_t KeyboardInterval;
+bool isKeyboardPolling = false;
+elapsedMillis KeyboardTimer;
+
+const size_t KEYBOARD_IN_BUFFER_SIZE = 8;
+usb_transfer_t *KeyboardIn = NULL;
+void check_interface_desc_boot_keyboard(const void *p);
+void prepare_endpoint(const void *p);
+void show_config_desc_full(const usb_config_desc_t *config_desc)
+{
+   // Full decode of config desc.
+  const uint8_t *p = &config_desc->val[0];
+  static uint8_t USB_Class = 0;
+  uint8_t bLength;
+  for (int i = 0; i < config_desc->wTotalLength; i+=bLength, p+=bLength) {
+    bLength = *p;
+    if ((i + bLength) <= config_desc->wTotalLength) {
+      const uint8_t bDescriptorType = *(p + 1);
+      switch (bDescriptorType) {
+        case USB_B_DESCRIPTOR_TYPE_DEVICE:
+          ESP_LOGI("", "USB Device Descriptor should not appear in config");
+          break;
+        case USB_B_DESCRIPTOR_TYPE_CONFIGURATION:
+          //show_config_desc(p);
+          break;
+        case USB_B_DESCRIPTOR_TYPE_STRING:
+          ESP_LOGI("", "USB string desc TBD");
+          break;
+        case USB_B_DESCRIPTOR_TYPE_INTERFACE:
+          //USB_Class = show_interface_desc(p);
+          check_interface_desc_boot_keyboard(p);
+          break;
+        case USB_B_DESCRIPTOR_TYPE_ENDPOINT:
+          //show_endpoint_desc(p);
+          if (isKeyboard && KeyboardIn == NULL) prepare_endpoint(p);
+          break;
+        case USB_B_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
+          // Should not be config config?
+          ESP_LOGI("", "USB device qual desc TBD");
+          break;
+        case USB_B_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION:
+          // Should not be config config?
+          ESP_LOGI("", "USB Other Speed TBD");
+          break;
+        case USB_B_DESCRIPTOR_TYPE_INTERFACE_POWER:
+          // Should not be config config?
+          ESP_LOGI("", "USB Interface Power TBD");
+          break;
+        case 0x21:
+          if (USB_Class == USB_CLASS_HID) {
+            //show_hid_desc(p);
+          }
+          break;
+        default:
+          ESP_LOGI("", "Unknown USB Descriptor Type: 0x%x", bDescriptorType);
+          break;
+      }
+    }
+    else {
+      ESP_LOGI("", "USB Descriptor invalid");
+      return;
+    }
+  }
+}
+#elif defined _ATOMS3R
+#include <M5GFX.h>
+#include <SPIFFS.h>
+#include <Wire.h>
+#include "Button.h"
+#include "lgfx.h"
+//USBキーボード
+//https://github.com/touchgadget/esp32-usb-host-demos
+#include <elapsedMillis.h>
+#include <usb/usb_host.h>
+#include "usbhhelp.hpp"
+bool isKeyboard = false;
+bool isKeyboardReady = false;
+uint8_t KeyboardInterval;
+bool isKeyboardPolling = false;
+elapsedMillis KeyboardTimer;
+
+extern Button extBtn;
+
+const size_t KEYBOARD_IN_BUFFER_SIZE = 8;
+usb_transfer_t *KeyboardIn = NULL;
+
+void check_interface_desc_boot_keyboard(const void *p);
+void prepare_endpoint(const void *p);
+void show_config_desc_full(const usb_config_desc_t *config_desc)
+{
+   // Full decode of config desc.
+  const uint8_t *p = &config_desc->val[0];
+  static uint8_t USB_Class = 0;
+  uint8_t bLength;
+  for (int i = 0; i < config_desc->wTotalLength; i+=bLength, p+=bLength) {
+    bLength = *p;
+    if ((i + bLength) <= config_desc->wTotalLength) {
+      const uint8_t bDescriptorType = *(p + 1);
+      switch (bDescriptorType) {
+        case USB_B_DESCRIPTOR_TYPE_DEVICE:
+          ESP_LOGI("", "USB Device Descriptor should not appear in config");
+          break;
+        case USB_B_DESCRIPTOR_TYPE_CONFIGURATION:
+          //show_config_desc(p);
+          break;
+        case USB_B_DESCRIPTOR_TYPE_STRING:
+          ESP_LOGI("", "USB string desc TBD");
+          break;
+        case USB_B_DESCRIPTOR_TYPE_INTERFACE:
+          //USB_Class = show_interface_desc(p);
+          check_interface_desc_boot_keyboard(p);
+          break;
+        case USB_B_DESCRIPTOR_TYPE_ENDPOINT:
+          //show_endpoint_desc(p);
+          if (isKeyboard && KeyboardIn == NULL) prepare_endpoint(p);
+          break;
+        case USB_B_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
+          // Should not be config config?
+          ESP_LOGI("", "USB device qual desc TBD");
+          break;
+        case USB_B_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION:
+          // Should not be config config?
+          ESP_LOGI("", "USB Other Speed TBD");
+          break;
+        case USB_B_DESCRIPTOR_TYPE_INTERFACE_POWER:
+          // Should not be config config?
+          ESP_LOGI("", "USB Interface Power TBD");
+          break;
+        case 0x21:
+          if (USB_Class == USB_CLASS_HID) {
+            //show_hid_desc(p);
+          }
+          break;
+        default:
+          ESP_LOGI("", "Unknown USB Descriptor Type: 0x%x", bDescriptorType);
+          break;
+      }
+    }
+    else {
+      ESP_LOGI("", "USB Descriptor invalid");
+      return;
+    }
+  }
+}
+#else
 #include <M5Stack.h>
+#endif
 #include "quasi88.h"
 #include "device.h"
 #include "initval.h"
@@ -357,11 +515,23 @@ static bool kanaMode = false;
 void checkKeyboard();
 void checkI2cKeyboard();
 void checkSerialKeyboard();
+void checkUSBKeyboard();
+void checkAutoKeyboard();
+void setAutoKey(String fileName);
 void keyPress(int keyCode);
+#ifdef _ATOMS3R
+void selectDiskAtomS3R();
+void selectDiskImageAtomS3R(int driveIndex);
+void systemMenuAtomS3R();
+#else
 void selectDisk();
 void selectDiskImage(int driveIndex);
 void systemMenu();
 void sortList(String fileList[], int fileListCount); 
+#endif
+#ifdef _CORES3
+void coreS3ButtonUpdate();
+#endif
 
 
 /******************************************************************************
@@ -375,6 +545,9 @@ void sortList(String fileList[], int fileListCount);
  */
 void event_init(void)
 {
+#if defined(_CORES3)||defined(_ATOMS3R)
+  usbh_setup(show_config_desc_full);
+#endif
 }
 
 /*
@@ -382,7 +555,19 @@ void event_init(void)
  */
 void event_update(void)
 {
+#ifdef _ATOMS3R
+    extBtn.read();
+    if (extBtn.wasReleasefor(500)){
+        systemMenuAtomS3R();
+    }else if (extBtn.wasReleased())
+    {
+        selectDiskAtomS3R();
+    }
+#else
     M5.update();
+#ifdef _CORES3
+    coreS3ButtonUpdate();
+#endif
     if (M5.BtnB.wasReleased())
     {
         selectDisk();
@@ -391,6 +576,7 @@ void event_update(void)
     {
         systemMenu();
     }
+#endif
     checkKeyboard();
 }
 
@@ -458,8 +644,13 @@ void checkKeyboard()
         quasi88_key(KEY88_SHIFTR, false);
         pressedKey88 = 0;
     }
+
     checkI2cKeyboard();
     checkSerialKeyboard();
+#if defined( _CORES3) || defined(_ATOMS3R)
+    checkUSBKeyboard();
+#endif
+    checkAutoKeyboard();
 }
 
 //--------------------------------------------------------------
@@ -469,6 +660,8 @@ void checkKeyboard()
 #define FACES_KEYBOARD_I2C_ADDR 0x08
 void checkI2cKeyboard()
 {
+    //test
+    return;
     int i2cKeyCode = 0;
     if (Wire.requestFrom(CARDKB_ADDR, 1))
     { // request 1 byte from keyboard
@@ -641,7 +834,21 @@ void checkSerialKeyboard()
         }
     }
 }
+#if defined(_ATOMS3R) || defined(_CORES3)
+void checkUSBKeyboard(){
+  usbh_task();
 
+  if (isKeyboardReady && !isKeyboardPolling && (KeyboardTimer > KeyboardInterval)) {
+    KeyboardIn->num_bytes = 8;
+    esp_err_t err = usb_host_transfer_submit(KeyboardIn);
+    if (err != ESP_OK) {
+      ESP_LOGI("", "usb_host_transfer_submit In fail: %x", err);
+    }
+    isKeyboardPolling = true;
+    KeyboardTimer = 0;
+  }
+}
+#endif
 //--------------------------------------------------------------
 // PC-8801 keyPress
 //--------------------------------------------------------------
@@ -694,12 +901,18 @@ void keyPress(int keyCode)
 }
 
 #define MAX_DISK_FILES 255
+#ifndef _ATOMS3R
 void selectDisk()
 {
+    waitDrawing();
+    graph_stopDrawing();
+    delay(100);
     File d88FileRoot;
     String fileList[MAX_DISK_FILES];
-
-    delay(100);
+    
+    M5.Lcd.startWrite();
+    M5.Lcd.fillScreen(0);
+    M5.Lcd.endWrite();
     String diskDir = String(osd_dir_disk());
     if (diskDir.endsWith("/") == true)
     {
@@ -729,9 +942,9 @@ void selectDisk()
     }
     d88FileRoot.close();
 
+    M5.Lcd.startWrite();
     delay(10);
-    M5.Lcd.fillScreen(TFT_BLACK);
-    delay(10);
+
     M5.Lcd.setTextSize(2);
 
     int startIndex = 0;
@@ -830,6 +1043,10 @@ void selectDisk()
             needRedraw = false;
         }
         M5.update();
+#ifdef _CORES3
+        coreS3ButtonUpdate();
+#endif
+
         if (M5.BtnA.wasReleased())
         {
             selectIndex--;
@@ -858,6 +1075,7 @@ void selectDisk()
                 M5.Lcd.fillScreen(TFT_BLACK);
                 delay(10);
                 graph_updateDrawFlag();
+                graph_restartDrawing();
                 return;
             }
             else if (selectIndex == 1)
@@ -880,16 +1098,30 @@ void selectDisk()
                     //quasi88_disk_eject_all();
                     //delay(10);
                     String fileName = diskDir + "/" + fileList[selectIndex - 2];
+                    //もし txt ファイルだった場合は、autoKey設定を行う。
+                    if(fileName.endsWith(".txt")){
+                        //autoKey設定
+                        setAutoKey(fileName);
+                        M5.Lcd.fillScreen(TFT_BLACK);
+                        delay(10);
+                        graph_updateDrawFlag();
+                        graph_restartDrawing();
+                        return;
+                    }
+
                     const char *cFileName = fileName.c_str();
+                    M5.Lcd.endWrite();
                     if(quasi88_disk_insert(driveIndex, cFileName, 0, false) == true)
                     //if (quasi88_disk_insert_all(cFileName, false) == true) //DRIVE1とDRIVER2
                     {
+                        M5.Lcd.startWrite();
                         M5.Lcd.print("Set Disk Image\nDrive:");
                         M5.Lcd.print((longPressB==false)?"1":"2");
                         M5.Lcd.println("");
                     }
                     else
                     {
+                        M5.Lcd.startWrite();
                         M5.Lcd.print("Set Disk FAIL!:");
                     }
                 //}
@@ -908,6 +1140,7 @@ void selectDisk()
             M5.Lcd.fillScreen(TFT_BLACK);
             delay(10);
             graph_updateDrawFlag();
+            graph_restartDrawing();
             return;
         }
         if(M5.BtnB.pressedFor(500) && longPressB ==false){
@@ -920,7 +1153,8 @@ void selectDisk()
 
 void selectDiskImage(int driveIndex)
 {
-    if (disk_image_exist(driveIndex) == false)
+    //if (disk_image_exist(driveIndex) == false)
+    if (disk_image_exist(driveIndex) == null)
     {
         return;
     }
@@ -976,6 +1210,10 @@ void selectDiskImage(int driveIndex)
 
 
         M5.update();
+#ifdef _CORES3
+       coreS3ButtonUpdate();
+#endif
+
         if (M5.BtnA.wasReleased())
         {
             selectIndex = selectIndex - 1;
@@ -1045,7 +1283,9 @@ void systemMenu()
             "RESET:N-BASIC",
             ""};
 
-    delay(10);
+    waitDrawing();
+    graph_stopDrawing();
+    delay(100);
     M5.Lcd.fillScreen(TFT_BLACK);
     delay(10);
     M5.Lcd.setTextSize(2);
@@ -1095,6 +1335,18 @@ void systemMenu()
                     M5.Lcd.println(drive[driveIndex].image[drive[driveIndex].selected_image].name);
                 }
             }
+#ifdef _CORES3  
+            //チェックするタイミングないのでここで…。
+            if(isKeyboard == false){ //USBキーボードが無い場合、USBへの電源出力をOFF
+                M5.Power.setUsbOutput(false);
+            }
+            M5.Lcd.print("USB 5V OUTPUT:");
+            M5.Lcd.println(M5.Power.getUsbOutput()?"ON":"OFF");
+            M5.Lcd.print("BATTERY LEVEL:");
+            M5.Lcd.println(M5.Power.getBatteryLevel());
+
+#endif
+
             M5.Lcd.drawRect(0, 240 - 19, 100, 18, TFT_WHITE);
             M5.Lcd.setCursor(35, 240 - 17);
             M5.Lcd.print("U P");
@@ -1108,6 +1360,10 @@ void systemMenu()
             needRedraw = false;
         }
         M5.update();
+#ifdef _CORES3
+        coreS3ButtonUpdate();
+#endif
+
         if (M5.BtnA.wasReleased())
         {
             selectIndex--;
@@ -1135,6 +1391,7 @@ void systemMenu()
                 M5.Lcd.fillScreen(TFT_BLACK);
                 delay(10);
                 graph_updateDrawFlag();
+                graph_restartDrawing();
                 return;
             }
 
@@ -1163,6 +1420,7 @@ void systemMenu()
                 M5.Lcd.fillScreen(TFT_BLACK);
                 delay(10);
                 graph_updateDrawFlag();
+                graph_restartDrawing();
                 return;
             }
             M5.Lcd.fillScreen(TFT_BLACK);
@@ -1172,13 +1430,18 @@ void systemMenu()
             M5.Lcd.print(basicMode);
             delay(1000);
             M5.Lcd.fillScreen(TFT_BLACK);
+            M5.Lcd.endWrite();
             quasi88_reset(&cfg);
+            //M5.Lcd.startWrite();
             graph_updateDrawFlag();
+            graph_restartDrawing();
+            
             return;
         }
         delay(100);
     }
 }
+#endif
 /* bubble sort filenames */
 //https://github.com/tobozo/M5Stack-SD-Updater/blob/master/examples/M5Stack-SD-Menu/M5Stack-SD-Menu.ino
 void sortList(String fileList[], int fileListCount) { 
@@ -1200,4 +1463,951 @@ void sortList(String fileList[], int fileListCount) {
       }
     }
   } while (swapped);
+}
+
+#ifdef _CORES3
+void coreS3ButtonUpdate(){
+        auto ms = m5gfx::millis();
+        uint_fast8_t btn_bits = 0;
+        int i = M5.Touch.getCount();
+        while (--i >= 0)
+        {
+          auto raw = M5.Touch.getTouchPointRaw(i);
+          if (raw.y > 200)
+          {
+            auto det = M5.Touch.getDetail(i);
+            if (det.state & m5::touch_state_t::touch)
+            {
+              if (M5.BtnA.isPressed()) { btn_bits |= 1 << 0; }
+              if (M5.BtnB.isPressed()) { btn_bits |= 1 << 1; }
+              if (M5.BtnC.isPressed()) { btn_bits |= 1 << 2; }
+              if (btn_bits || !(det.state & m5::touch_state_t::mask_moving))
+              {
+                btn_bits |= 1 << ((raw.x - 2) / 107);
+              }
+            }
+          }
+       
+        }
+        M5.BtnA.setRawState(ms, btn_bits & 1);
+        M5.BtnB.setRawState(ms, btn_bits & 2);
+        M5.BtnC.setRawState(ms, btn_bits & 4);
+}
+#endif
+
+#if defined(_CORES3)||defined(_ATOMS3R)
+//USB Keyboard
+unsigned char hid_to_emu[] ={
+0xff,//0	0x00	Reserved (no event indicated)
+0xff,//1	0x01	Keyboard ErrorRollOver?
+0xff,//2	0x02	Keyboard POSTFail
+0xff,//3	0x03	Keyboard ErrorUndefined?
+KEY88_A,//4	0x04	Keyboard a and A
+KEY88_B,//5	0x05	Keyboard b and B
+KEY88_C,//6	0x06	Keyboard c and C
+KEY88_D,//7	0x07	Keyboard d and D
+KEY88_E,//8	0x08	Keyboard e and E
+KEY88_F,//9	0x09	Keyboard f and F
+KEY88_G,//10	0x0A	Keyboard g and G
+KEY88_H,//11	0x0B	Keyboard h and H
+KEY88_I,//12	0x0C	Keyboard i and I
+KEY88_J,//13	0x0D	Keyboard j and J
+KEY88_K,//14	0x0E	Keyboard k and K
+KEY88_L,//15	0x0F	Keyboard l and L
+KEY88_M,//16	0x10	Keyboard m and M
+KEY88_N,//17	0x11	Keyboard n and N
+KEY88_O,//18	0x12	Keyboard o and O
+KEY88_P,//19	0x13	Keyboard p and P
+KEY88_Q,//20	0x14	Keyboard q and Q
+KEY88_R,//21	0x15	Keyboard r and R
+KEY88_S,//22	0x16	Keyboard s and S
+KEY88_T,//23	0x17	Keyboard t and T
+KEY88_U,//24	0x18	Keyboard u and U
+KEY88_V,//25	0x19	Keyboard v and V
+KEY88_W,//26	0x1A	Keyboard w and W
+KEY88_X,//27	0x1B	Keyboard x and X
+KEY88_Y,//28	0x1C	Keyboard y and Y
+KEY88_Z,//29	0x1D	Keyboard z and Z
+KEY88_1,//30	0x1E	Keyboard 1 and !
+KEY88_2,//31	0x1F	Keyboard 2 and @
+KEY88_3,//32	0x20	Keyboard 3 and #
+KEY88_4,//33	0x21	Keyboard 4 and $
+KEY88_5,//34	0x22	Keyboard 5 and %
+KEY88_6,//35	0x23	Keyboard 6 and ^
+KEY88_7,//36	0x24	Keyboard 7 and &
+KEY88_8,//37	0x25	Keyboard 8 and *
+KEY88_9,//38	0x26	Keyboard 9 and (
+KEY88_0,//39	0x27	Keyboard 0 and )
+KEY88_RETURNL,//40	0x28	Keyboard Return (ENTER)
+KEY88_ESC,//41	0x29	Keyboard ESCAPE
+KEY88_INS_DEL,//42	0x2A	Keyboard DELETE (Backspace)
+KEY88_TAB,//43	0x2B	Keyboard Tab
+KEY88_SPACE,//44	0x2C	Keyboard Spacebar
+KEY88_MINUS,//45	0x2D	Keyboard - and (underscore)
+KEY88_CARET,//46	0x2E	Keyboard = and +
+KEY88_AT,//47	0x2F	Keyboard [ and {
+KEY88_BRACKETLEFT,//48	0x30	Keyboard ] and }
+KEY88_YEN,//49	0x31	Keyboard \ and ｜
+KEY88_BRACKETRIGHT,//50	0x32	Keyboard Non-US # and ~
+KEY88_SEMICOLON,//51	0x33	Keyboard ; and :
+KEY88_COLON,//52	0x34	Keyboard ' and "
+KEY88_KANA,//53	0x35	Keyboard Grave Accent and Tilde
+KEY88_COMMA,//54	0x36	Keyboard, and <
+KEY88_PERIOD,//55	0x37	Keyboard . and >
+KEY88_SLASH,//56	0x38	Keyboard / and ?
+KEY88_CAPS,//57	0x39	Keyboard Caps Lock
+KEY88_F1,//58	0x3A	Keyboard F1
+KEY88_F2,//59	0x3B	Keyboard F2
+KEY88_F3,//60	0x3C	Keyboard F3
+KEY88_F4,//61	0x3D	Keyboard F4
+KEY88_F5,//62	0x3E	Keyboard F5
+0xff,//63	0x3F	Keyboard F6
+0xff,//64	0x40	Keyboard F7
+0xff,//65	0x41	Keyboard F8
+0xff,//66	0x42	Keyboard F9
+0xff,//67	0x43	Keyboard F10
+0xff,//68	0x44	Keyboard F11
+0xff,//69	0x45	Keyboard F12
+0xff,//70	0x46	Keyboard PrintScreen
+0xff,//71	0x47	Keyboard Scroll Lock
+KEY88_STOP,//72	0x48	Keyboard Pause
+KEY88_INS,//73	0x49	Keyboard Insert
+KEY88_HOME,//74	0x4A	Keyboard Home
+KEY88_ROLLUP,//75	0x4B	Keyboard PageUp
+0xff,//76	0x4C	Keyboard Delete Forward
+0xff,//77	0x4D	Keyboard End
+KEY88_ROLLDOWN,//78	0x4E	Keyboard PageDown
+KEY88_RIGHT,//79	0x4F	Keyboard RightArrow
+KEY88_LEFT,//80	0x50	Keyboard LeftArrow
+KEY88_DOWN,//81	0x51	Keyboard DownArrow
+KEY88_UP,//82	0x52	Keyboard UpArrow
+0xff,//83	0x53	Keypad Num Lock and Clear
+KEY88_KP_DIVIDE,//84	0x54	Keypad /
+KEY88_KP_MULTIPLY,//85	0x55	Keypad *
+KEY88_KP_SUB,//86	0x56	Keypad -
+KEY88_KP_ADD,//87	0x57	Keypad +
+KEY88_RETURNR,//88	0x58	Keypad ENTER
+KEY88_KP_1,//89	0x59	Keypad 1 and End
+KEY88_KP_2,//90	0x5A	Keypad 2 and Down Arrow
+KEY88_KP_3,//91	0x5B	Keypad 3 and PageDn?
+KEY88_KP_4,//92	0x5C	Keypad 4 and Left Arrow
+KEY88_KP_5,//93	0x5D	Keypad 5
+KEY88_KP_6,//94	0x5E	Keypad 6 and Right Arrow
+KEY88_KP_7,//95	0x5F	Keypad 7 and Home
+KEY88_KP_8,//96	0x60	Keypad 8 and Up Arrow
+KEY88_KP_9,//97	0x61	Keypad 9 and PageUp?
+KEY88_KP_0,//98	0x62	Keypad 0 and Insert
+KEY88_KP_PERIOD,//99	0x63	Keypad . and Delete
+0xff,//100	0x64	Keyboard Non-US \ and ｜
+0xff,//101	0x65	Keyboard Application
+0xff,//102	0x66	Keyboard Power
+KEY88_KP_EQUAL,//103	0x67	Keypad =
+0xff,//104	0x68	Keyboard F13
+0xff,//105	0x69	Keyboard F14
+0xff,//106	0x6A	Keyboard F15
+0xff,//107	0x6B	Keyboard F16
+0xff,//108	0x6C	Keyboard F17
+0xff,//109	0x6D	Keyboard F18
+0xff,//110	0x6E	Keyboard F19
+0xff,//111	0x6F	Keyboard F20
+0xff,//112	0x70	Keyboard F21
+0xff,//113	0x71	Keyboard F22
+0xff,//114	0x72	Keyboard F23
+0xff,//115	0x73	Keyboard F24
+0xff,//116	0x74	Keyboard Execute
+0xff,//117	0x75	Keyboard Help
+0xff,//118	0x76	Keyboard Menu
+0xff,//119	0x77	Keyboard Select
+0xff,//120	0x78	Keyboard Stop
+0xff,//121	0x79	Keyboard Again
+0xff,//122	0x7A	Keyboard Undo
+0xff,//123	0x7B	Keyboard Cut
+0xff,//124	0x7C	Keyboard Copy
+0xff,//125	0x7D	Keyboard Paste
+0xff,//126	0x7E	Keyboard Find
+0xff,//127	0x7F	Keyboard Mute
+0xff,//128	0x80	Keyboard Volume Up
+0xff,//129	0x81	Keyboard Volume Down
+0xff,//130	0x82	Keyboard Locking Caps Lock
+0xff,//131	0x83	Keyboard Locking Num Lock
+0xff,//132	0x84	Keyboard Locking Scroll Lock
+0xff,//133	0x85	Keypad Comma
+0xff,//134	0x86	Keypad Equal Sign
+KEY88_UNDERSCORE,//135	0x87	Keyboard International1
+0xff,//136	0x88	Keyboard International2
+KEY88_YEN,//137	0x89	Keyboard International3
+KEY88_HENKAN,//138	0x8A	Keyboard International4 変換
+KEY88_KETTEI,//139	0x8B	Keyboard International5 無変換
+0xff,//140	0x8C	Keyboard International6 
+0xff,//141	0x8D	Keyboard International7
+0xff,//142	0x8E	Keyboard International8
+0xff,//143	0x8F	Keyboard International9
+0xff,//144	0x90	Keyboard LANG1
+0xff,//145	0x91	Keyboard LANG2
+0xff,//146	0x92	Keyboard LANG3
+0xff,//147	0x93	Keyboard LANG4
+0xff,//148	0x94	Keyboard LANG5
+0xff,//149	0x95	Keyboard LANG6
+0xff,//150	0x96	Keyboard LANG7
+0xff,//151	0x97	Keyboard LANG8
+0xff,//152	0x98	Keyboard LANG9
+0xff,//153	0x99	Keyboard Alternate Erase
+0xff,//154	0x9A	Keyboard SysReq?/Attention
+0xff,//155	0x9B	Keyboard Cancel
+0xff,//156	0x9C	Keyboard Clear
+0xff,//157	0x9D	Keyboard Prior
+0xff,//158	0x9E	Keyboard Return
+0xff,//159	0x9F	Keyboard Separator
+0xff,//160	0xA0	Keyboard Out
+0xff,//161	0xA1	Keyboard Oper
+0xff,//162	0xA2	Keyboard Clear/Again
+0xff,//163	0xA3	Keyboard CrSel?/Props
+0xff,//164	0xA4	Keyboard ExSel?
+0xff,//165    0xA5    レイヤー指定
+0xff,//166    0xA6    レイヤー指定
+0xff,//167    0xA7    レイヤー切り替え
+0xff,//168    0xA8    未定義
+0xff,//169    0xA9    ユーザ定義マクロ(Long)1
+0xff,//170    0xAA     ユーザ定義マクロ(Long)2
+0xff,//171    0xAB     ユーザ定義マクロ(Long)3
+0xff,//172    0xAC     ユーザ定義マクロ(Long)4
+0xff,//173    0xAD     ユーザ定義マクロ(Long)5
+0xff,//174    0xAE     ユーザ定義マクロ(Long)6
+0xff,//175    0xAF    ユーザ定義マクロ(Long)7
+0xff,//176    0xB0    ユーザ定義マクロ(Short)1
+0xff,//177    0xB1    ユーザ定義マクロ(short)2
+0xff,//178    0xB2    ユーザ定義マクロ(short)3
+0xff,//179    0xB3    ユーザ定義マクロ(short)4
+0xff,//180    0xB4    ユーザ定義マクロ(short)5
+0xff,//181    0xB5    ユーザ定義マクロ(short)6
+0xff,//182    0xB6    ユーザ定義マクロ(short)7
+0xff,//183    0xB7    ユーザ定義マクロ(short)8
+0xff,//184    0xB8    ユーザ定義マクロ(short)9
+0xff,//185    0xB9    ユーザ定義マクロ(short)10
+0xff,//186    0xBA    ユーザ定義マクロ(short)11
+0xff,//187    0xBB    ユーザ定義マクロ(short)12
+0xff,//188    0xBC    ユーザ定義マクロ(short)13
+0xff,//189    0xBD    ユーザ定義マクロ(short)14
+0xff,//190    0xBE    未定義
+0xff,//191    0xBF    未定義
+0xff,//192    0xC0    未定義
+0xff,//193    0xC1    未定義
+0xff,//194    0xC2    未定義
+0xff,//195    0xC3    未定義
+0xff,//196    0xC4    未定義
+0xff,//197    0xC5    未定義
+0xff,//198    0xC6    未定義
+0xff,//199    0xC7    未定義
+0xff,//200    0xC8    未定義
+0xff,//201    0xC9    未定義
+0xff,//202    0xCA    未定義
+0xff,//203    0xCB    未定義
+0xff,//204    0xCC    未定義
+0xff,//205    0xCD    未定義
+0xff,//206    0xCE    未定義
+0xff,//207    0xCF    未定義
+0xff,//208    0xD0    システムコントロール Power Down
+0xff,//209    0xD1    システムコントロール Sleep
+0xff,//210    0xD2    未定義
+0xff,//211    0xD3    未定義
+0xff,//212    0xD4    未定義
+0xff,//213    0xD5    未定義
+0xff,//214    0xD6    組み込みマクロ テンキー =　(注1)
+0xff,//215    0xD7    組み込みマクロ テンキー , (カンマ) (注1)
+0xff,//216    0xD8    組み込みマクロ テンキー 000
+0xff,//217    0xD9    組み込みマクロ Ctrl & Alt & Del
+0xff,//218    0xDA    組み込みマクロ Ctrl & Z
+0xff,//219    0xDB    組み込みマクロ Ctrl & X
+0xff,//220    0xDC    組み込みマクロ Ctrl & C
+0xff,//221    0xDD    組み込みマクロ Ctrl & V
+0xff,//222    0xDE    組み込みマクロ Win & Shift & N
+0xff,//223    0xDF    組み込みマクロ Ctrl & Shift & Esc
+0xff,//KEY88_CTRL,//224	0xE0	Keyboard LeftControl //SHIFT,CTRL,ALT は mods で判定
+0xff,//KEY88_SHIFTL,//225	0xE1	Keyboard LeftShift
+0xff,//KEY88_GRAPH,//226	0xE2	Keyboard LeftAlt
+0xff,//227	0xE3	Keyboard Left GUI
+0xff,//KEY88_CTRL,//228	0xE4	Keyboard RightControl
+0xff,//KEY88_SHIFTR,//229	0xE5	Keyboard RightShift
+0xff,//KEY88_GRAPH,//230	0xE6	Keyboard RightAlt
+0xff,//231	0xE7	Keyboard Right GUI
+0xff//232-65535	0xE8-0xFFFF	Reserved
+};
+static int _last_key = 0;
+//https://wiki.onakasuita.org/pukiwiki/?HID%2F%E3%82%AD%E3%83%BC%E3%82%B3%E3%83%BC%E3%83%89
+static void keyboard(const uint8_t* d, int len)
+{
+    int mods = d[1];          // can we use hid mods instead of SDL? TODO
+    int key_code = d[3];      // only care about first key
+    //shift Key KEY88_SHIFTR
+    if((mods & 0b00100010) > 0){
+        quasi88_key(KEY88_SHIFT, true);
+    }else{
+        quasi88_key(KEY88_SHIFT, false);
+    }
+    if((mods & 0b00010001) > 0){
+        quasi88_key(KEY88_CTRL, true);
+    }else{
+        quasi88_key(KEY88_CTRL, false);
+    }
+    if((mods & 0b01000100) > 0){
+        quasi88_key(KEY88_GRAPH, true);
+    }else{
+        quasi88_key(KEY88_GRAPH, false);
+    }
+    if (key_code != _last_key) {
+        //Serial1.printf("mods:%d keyCode:%d\n",mods,key_code);
+        //if(key_code < 232){
+        //    Serial1.printf("hidKey:%d\n",hid_to_emu[key_code]);
+        //}
+
+        //かなキーは特別扱い。押すたびにON/OFFトグル
+        if (hid_to_emu[key_code] == KEY88_KANA)
+        {
+            if (kanaMode == false)
+            {
+                quasi88_key(KEY88_KANA, true);
+                kanaMode = true;
+            }
+            else
+            {
+                quasi88_key(KEY88_KANA, false);
+                kanaMode = false;
+            }
+            return;
+        }
+
+        if(0 < _last_key && _last_key < 232){
+          quasi88_key(hid_to_emu[_last_key],false);
+        }
+        if (key_code) {
+            _last_key = key_code;
+        } else {
+            _last_key = 0;
+        }
+
+        if(0 < key_code && key_code < 232){
+          quasi88_key(hid_to_emu[key_code],true);
+        }        
+    }
+}
+void keyboard_transfer_cb(usb_transfer_t *transfer)
+{
+  if (Device_Handle == transfer->device_handle) {
+    isKeyboardPolling = false;
+    if (transfer->status == 0) {
+      if (transfer->actual_num_bytes == 8) {
+        uint8_t *const p = transfer->data_buffer;
+        //bluetoothキーボードとあわせる。[1]にmodiry[3]にキーコード
+        uint8_t keyData[4];
+        keyData[1] = p[0];
+        keyData[3] = p[2];
+        
+        //M5.Display.setCursor(0,0);
+        //M5.Display.setTextColor(WHITE,BLACK);
+        //M5.Display.printf("HID report: %02x %02x %02x %02x %02x %02x %02x %02x",
+         //   p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+
+            keyboard(keyData,4);
+
+     }
+    }
+  }
+}
+void check_interface_desc_boot_keyboard(const void *p)
+{
+  const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
+
+  if ((intf->bInterfaceClass == USB_CLASS_HID) &&
+      (intf->bInterfaceSubClass == 1) &&
+      (intf->bInterfaceProtocol == 1)) {
+    isKeyboard = true;
+    ESP_LOGI("", "Claiming a boot keyboard!");
+    esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle,
+        intf->bInterfaceNumber, intf->bAlternateSetting);
+    if (err != ESP_OK) ESP_LOGI("", "usb_host_interface_claim failed: %x", err);
+  }
+}
+
+void prepare_endpoint(const void *p)
+{
+  const usb_ep_desc_t *endpoint = (const usb_ep_desc_t *)p;
+  esp_err_t err;
+
+  // must be interrupt for HID
+  if ((endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK) != USB_BM_ATTRIBUTES_XFER_INT) {
+    ESP_LOGI("", "Not interrupt endpoint: 0x%02x", endpoint->bmAttributes);
+    return;
+  }
+  if (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK) {
+    err = usb_host_transfer_alloc(KEYBOARD_IN_BUFFER_SIZE, 0, &KeyboardIn);
+    if (err != ESP_OK) {
+      KeyboardIn = NULL;
+      ESP_LOGI("", "usb_host_transfer_alloc In fail: %x", err);
+      return;
+    }
+    KeyboardIn->device_handle = Device_Handle;
+    KeyboardIn->bEndpointAddress = endpoint->bEndpointAddress;
+    KeyboardIn->callback = keyboard_transfer_cb;
+    KeyboardIn->context = NULL;
+    isKeyboardReady = true;
+    KeyboardInterval = endpoint->bInterval;
+    ESP_LOGI("", "USB boot keyboard ready");
+  }
+  else {
+    ESP_LOGI("", "Ignoring interrupt Out endpoint");
+  }
+}
+
+#endif
+
+#ifdef _ATOMS3R
+
+void selectDiskAtomS3R()
+{
+    waitDrawing();
+    graph_stopDrawing();
+    delay(100);
+    File d88FileRoot;
+    String fileList[MAX_DISK_FILES];
+    
+    lcd.startWrite();
+    lcd.fillScreen(0);
+    lcd.endWrite();
+    String diskDir = String(osd_dir_disk());
+    if (diskDir.endsWith("/") == true)
+    {
+        diskDir = diskDir.substring(0, diskDir.length() - 1);
+    }
+
+    d88FileRoot = SPIFFS.open(diskDir);
+    int fileListCount = 0;
+
+    while (1)
+    {
+        File entry = d88FileRoot.openNextFile();
+        if (!entry)
+        { // no more files
+            break;
+        }
+        //ファイルのみ取得
+        if (!entry.isDirectory())
+        {
+            String fullFileName = entry.name();
+            String fileName = fullFileName.substring(fullFileName.lastIndexOf("/") + 1);
+            fileList[fileListCount] = fileName;
+            fileListCount++;
+            //Serial.println(fileName);
+        }
+        entry.close();
+    }
+    d88FileRoot.close();
+
+    lcd.startWrite();
+    delay(10);
+
+    lcd.setTextSize(1);
+
+    int startIndex = 0;
+    int endIndex = startIndex + 10;
+    if (endIndex > fileListCount)
+    {
+        endIndex = fileListCount;
+    }
+
+    sortList(fileList, fileListCount);
+
+    boolean needRedraw = true;
+    boolean longPressB = false;
+    int selectIndex = 0;
+    String curDiskFile = String(file_disk[0]);
+    curDiskFile = curDiskFile.substring(curDiskFile.lastIndexOf("/") + 1);
+    curDiskFile.trim();
+
+    if (curDiskFile.length() > 0)
+    {
+        for (int index = 0; index < fileListCount; index++)
+        {
+            if (fileList[index].compareTo(curDiskFile) == 0)
+            {
+                selectIndex = index + 2;
+                break;
+            }
+        }
+    }
+
+    while (true)
+    {
+
+        if (needRedraw == true)
+        {
+            lcd.fillScreen(0);
+            lcd.setCursor(0, 0);
+            startIndex = selectIndex - 5;
+            if (startIndex < 0)
+            {
+                startIndex = 0;
+            }
+            endIndex = startIndex + 12;
+            if (endIndex + 1 > fileListCount)
+            {
+                endIndex = fileListCount + 1;
+                startIndex = endIndex - 12;
+                if(startIndex < 0){
+                    startIndex = 0;
+                }
+            }
+
+            for (int index = startIndex; index < endIndex + 1; index++)
+            {
+                if (index == selectIndex)
+                {
+                    if(longPressB==true){
+                        lcd.setTextColor(TFT_RED);
+                    }else{
+                        lcd.setTextColor(TFT_GREEN);   
+                    }
+                }
+                else
+                {
+                    lcd.setTextColor(TFT_WHITE);
+                }
+                if (index == 0)
+                {
+                    lcd.println("[BACK]");
+                }
+                else if (index == 1)
+                {
+                    lcd.println("[EJECT]");
+                }
+                else
+                {
+                    lcd.println(fileList[index - 2]);
+                }
+            }
+            lcd.setTextColor(TFT_WHITE);
+
+            needRedraw = false;
+        }
+        
+        extBtn.read();
+
+        //長押し・決定
+        //押し・下
+        if (extBtn.wasReleasefor(500)){
+
+            if (selectIndex == 0)
+            {
+                //何もせず戻る
+                lcd.fillScreen(TFT_BLACK);
+                delay(10);
+                graph_updateDrawFlag();
+                graph_restartDrawing();
+                return;
+            }
+            else if (selectIndex == 1)
+            {
+                quasi88_disk_eject_all();
+                lcd.fillScreen(TFT_BLACK);
+                lcd.setCursor(0, 0);
+                lcd.println("Disk Eject");
+            }
+            else
+            {
+                delay(10);
+                //Set Disk
+                lcd.startWrite();
+                lcd.fillScreen(TFT_BLACK);
+                lcd.setCursor(0, 0);
+                lcd.endWrite();
+                int driveIndex = DRIVE_1;
+                //if (curDiskFile.compareTo(fileList[selectIndex - 2]) != 0)
+                //{ //変更されている場合のみセット
+                    delay(10);
+                    //quasi88_disk_eject_all();
+                    //delay(10);
+                    String fileName = diskDir + "/" + fileList[selectIndex - 2];
+                    //もし txt ファイルだった場合は、autoKey設定を行う。
+                    if(fileName.endsWith(".txt")){
+                        //autoKey設定
+                        setAutoKey(fileName);
+                        lcd.fillScreen(TFT_BLACK);
+                        delay(10);
+                        graph_updateDrawFlag();
+                        graph_restartDrawing();
+                        return;
+                    }
+                    const char *cFileName = fileName.c_str();
+                    
+                    if(quasi88_disk_insert(driveIndex, cFileName, 0, false) == true)
+                    //if (quasi88_disk_insert_all(cFileName, false) == true) //DRIVE1とDRIVER2
+                    {
+                        lcd.startWrite();
+                        lcd.print("Set Disk Image\nDrive:");
+                        lcd.print("1");
+                        lcd.println("");
+                    }
+                    else
+                    {
+                        lcd.startWrite();
+                        lcd.print("Set Disk FAIL!:");
+                    }
+                //}
+                //else
+            // {
+            //    lcd.print("Not Change:");
+            //}
+                lcd.println(fileList[selectIndex -2]);
+                lcd.endWrite();
+                //イメージが複数ある場合、イメージのセレクト
+                if (disk_image_num(driveIndex) > 1)
+                {
+                    selectDiskImageAtomS3R(driveIndex);
+                }
+            }
+            delay(2000);
+            lcd.fillScreen(TFT_BLACK);
+            delay(10);
+            graph_updateDrawFlag();
+            graph_restartDrawing();
+            return;
+        
+        }
+
+        if (extBtn.wasReleased()) {
+            selectIndex++;
+            if (selectIndex > fileListCount + 1)
+            {
+                selectIndex = 0;
+            }
+            needRedraw = true;
+        }
+    
+        if(extBtn.pressedFor(500) && longPressB ==false){
+            longPressB = true;
+            needRedraw = true;
+        }
+        
+        delay(100);
+    }
+}
+
+void selectDiskImageAtomS3R(int driveIndex)
+{
+    //if (disk_image_exist(driveIndex) == false)
+    if (disk_image_exist(driveIndex) == null)
+    {
+        return;
+    }
+    int imageCount = disk_image_num(driveIndex);
+
+    boolean needUpdate = true;
+    boolean longPressB = false;
+    int selectIndex = 0;
+    while (true)
+    {        
+        if(needUpdate){
+            lcd.startWrite();
+            lcd.fillScreen(TFT_BLACK);
+            lcd.setCursor(0, 0);
+            lcd.setTextColor(TFT_WHITE);
+            for (int imageIndex = 0; imageIndex < imageCount; imageIndex++)
+            {
+                lcd.setTextColor(TFT_WHITE);
+                if(selectIndex == imageIndex){
+                    if(longPressB == true){
+                        lcd.setTextColor(TFT_RED);
+                    }else{
+                        lcd.setTextColor(TFT_GREEN);
+                    }  
+                }
+                lcd.printf("%d :", imageIndex + 1);
+                lcd.println(drive[driveIndex].image[imageIndex].name);
+            }
+            lcd.setTextColor(TFT_WHITE);
+            lcd.endWrite();
+            needUpdate = false;
+        }
+
+
+        extBtn.read();
+
+        //長押し・決定
+        //押し・下
+        
+        if (extBtn.wasReleasefor(500)){
+            quasi88_disk_image_select(driveIndex, selectIndex);    
+	            break;        	
+        }
+
+        if (extBtn.wasReleased()){
+            selectIndex = selectIndex + 1;
+            if(selectIndex >= imageCount ){
+                selectIndex = 0;
+            }
+            needUpdate = true;
+        }
+
+        if (extBtn.pressedFor(500)&&longPressB==false){
+            longPressB = true;
+            needUpdate = true;
+        }
+        delay(100);
+    }
+    lcd.startWrite();
+    lcd.fillScreen(TFT_BLACK);
+    lcd.setCursor(0, 0);
+    lcd.println("Set Disk Image");
+    
+    for (int driveIndex = 0; driveIndex < 2; driveIndex++)
+    {
+        lcd.printf("DRIVE %d:", driveIndex + 1);
+        String curDiskFile = String(file_disk[driveIndex]);
+        curDiskFile = curDiskFile.substring(curDiskFile.lastIndexOf("/") + 1);
+        lcd.println(curDiskFile);
+        lcd.print(" ");
+        lcd.println(drive[driveIndex].image[drive[driveIndex].selected_image].name);
+    }
+    lcd.endWrite();
+}
+
+#define MENU_ITEM_COUNT 5
+void systemMenuAtomS3R()
+{
+
+    static String menuItem[] =
+        {
+            "[BACK]",
+            "RESET:N88-BASIC V2",
+            "RESET:N88-BASIC V1H",
+            "RESET:N88-BASIC V1S",
+            "RESET:N-BASIC",
+            ""};
+
+    waitDrawing();
+    graph_stopDrawing();
+    delay(100);
+    lcd.fillScreen(TFT_BLACK);
+    delay(10);
+    lcd.setTextSize(1);
+    bool needRedraw = true;
+    boolean longPressB = false;
+    int menuItemCount = 0;
+    while(menuItem[menuItemCount] != ""){
+        menuItemCount++;
+    }
+
+    int selectIndex = 0;
+    while (true)
+    {
+        if (needRedraw == true)
+        {
+            lcd.fillScreen(0);
+            lcd.setCursor(0, 0);
+            for (int index = 0; index < menuItemCount; index++)
+            {
+                if (index == selectIndex)
+                {
+                    if(longPressB==true){
+                        lcd.setTextColor(TFT_RED);
+                    }else{
+                        lcd.setTextColor(TFT_GREEN);
+                    }
+                }
+                else
+                {
+                    lcd.setTextColor(TFT_WHITE);
+                }
+                lcd.println(menuItem[index]);
+            }
+            lcd.setTextColor(TFT_WHITE);
+            lcd.println("");
+
+            for (int driveIndex = 0; driveIndex < 2; driveIndex++)
+            {
+                lcd.printf("DRIVE %d:", driveIndex + 1);
+                if (drive[driveIndex].empty == true)
+                {
+                    lcd.println("[EMPTY]");
+                    lcd.println("");
+                }
+                else
+                {
+                    String curDiskFile = String(file_disk[driveIndex]);
+                    curDiskFile = curDiskFile.substring(curDiskFile.lastIndexOf("/") + 1);
+                    lcd.println(curDiskFile);
+                    lcd.print(" ");
+                    lcd.println(drive[driveIndex].image[drive[driveIndex].selected_image].name);
+                }
+            }
+
+            lcd.drawRect(0, 240 - 19, 100, 18, TFT_WHITE);
+            lcd.setCursor(35, 240 - 17);
+            lcd.print("U P");
+            lcd.drawRect(110, 240 - 19, 100, 18, TFT_WHITE);
+            lcd.setCursor(125, 240 - 17);
+            lcd.print("SELECT");
+            lcd.drawRect(220, 240 - 19, 100, 18, TFT_WHITE);
+            lcd.setCursor(245, 240 - 17);
+            lcd.print("DOWN");
+
+            needRedraw = false;
+        }
+        extBtn.read();
+
+        if (extBtn.wasReleasefor(500))
+        {
+            if (selectIndex == 0)
+            {
+                lcd.fillScreen(TFT_BLACK);
+                delay(10);
+                graph_updateDrawFlag();
+                graph_restartDrawing();
+                return;
+            }
+
+            T_RESET_CFG cfg;
+            quasi88_get_reset_cfg(&cfg);
+            String basicMode = "";
+            switch (selectIndex)
+            {
+            case 1:
+                cfg.boot_basic = BASIC_V2;
+                basicMode = "N88-BASIC V2";
+                break;
+            case 2:
+                cfg.boot_basic = BASIC_V1H;
+                basicMode = "N88-BASIC V1H";
+                break;
+            case 3:
+                cfg.boot_basic = BASIC_V1S;
+                basicMode = "N88-BASIC V1S";
+                break;
+            case 4:
+                cfg.boot_basic = BASIC_N;
+                basicMode = "N-BASIC";
+                break;
+            default:
+                lcd.fillScreen(TFT_BLACK);
+                delay(10);
+                graph_updateDrawFlag();
+                graph_restartDrawing();
+                return;
+            }
+            lcd.fillScreen(TFT_BLACK);
+            lcd.setCursor(0, 0);
+            lcd.println("Reset QUASI88...");
+            lcd.print("MODE : ");
+            lcd.print(basicMode);
+            delay(1000);
+            lcd.fillScreen(TFT_BLACK);
+            lcd.endWrite();
+            quasi88_reset(&cfg);
+            //lcd.startWrite();
+            graph_updateDrawFlag();
+            graph_restartDrawing();
+            
+            return;
+        }
+        
+        if (extBtn.wasReleased())
+        {
+            selectIndex++;
+            if (selectIndex >= menuItemCount)
+            {
+                selectIndex = 0;
+            }
+            needRedraw = true;
+        }
+        if(extBtn.pressedFor(500) && longPressB ==false){
+            longPressB = true;
+            needRedraw = true;
+        }
+
+        delay(100);
+    }
+}
+#endif
+
+String autoKeyData = ""; //簡単のため Stringで管理してます
+int autoKeyIndex = 0;
+int autoKeyLineDelayMillis = 100; //\n 入力時の待ち時間
+long autoKeyNextMillis = 0;
+
+bool isAutoKeyHeadChar = true; //行の先頭文字
+
+void checkAutoKeyboard(){
+    //ファイルから読み込んだテキストファイル順にキーを押下する。
+    //読み込みテキストが無いなら何もしない
+    if(autoKeyData == ""){
+        return;
+    }
+    //前回の入力から指定秒経過しているかチェック
+    long nowMillis = millis();
+    if(nowMillis < autoKeyNextMillis){
+        return;
+    }
+    char inputKey = autoKeyData.charAt(autoKeyIndex);
+
+    //先頭#のみの行は入力しない。指定された時間待ち
+    if( inputKey == '#' && isAutoKeyHeadChar == true && (autoKeyIndex + 1 < autoKeyData.length())){
+        char inputNextKey = autoKeyData.charAt(autoKeyIndex + 1);
+        if(inputNextKey == '\r'){ //改行時は指定された時間待ち    
+            autoKeyNextMillis = nowMillis + autoKeyLineDelayMillis;
+            autoKeyIndex = autoKeyIndex + 2;
+            return;
+        }
+    }
+    if(inputKey == '\r'){ //改行時は指定された時間待ち
+        autoKeyNextMillis = nowMillis + autoKeyLineDelayMillis;
+        isAutoKeyHeadChar=true;
+    }else{
+        autoKeyNextMillis = nowMillis + 100;//通常の待ち
+        isAutoKeyHeadChar=false;
+    }
+    
+    keyPress(inputKey);
+
+    autoKeyIndex++;
+    if(autoKeyIndex > autoKeyData.length()){
+        //delete autoKeyData;
+        autoKeyData = "";
+        autoKeyIndex = 0;
+    }   
+}
+
+void setAutoKey(String fileName){
+    //1行目の先頭が# の場合、次の数字が入力待ち秒数。なかった場合はデフォルト値とする。
+
+#ifdef _ATOMS3R
+    File autoKeyFile = SPIFFS.open(fileName, FILE_READ);
+#else
+    File autoKeyFile = SD.open(fileName, FILE_READ);
+#endif
+    autoKeyData = "";
+    autoKeyIndex = 0;
+    autoKeyLineDelayMillis = 100;
+    if(!autoKeyFile){
+        return;
+    }
+    while (autoKeyFile.available()) {
+        char keyData = char(autoKeyFile.read());
+        autoKeyData += keyData;     
+    }
+
+    // \r\n⇒ \r
+    //PC-8001の改行は chr$(13) = \r
+    autoKeyData.replace("\r\n","\r");  
+    autoKeyData.replace("\n","\r"); 
+
+    if(autoKeyData.startsWith("#")){
+        //最初の改行を探す
+        int lineEnd = autoKeyData.indexOf("\r");
+        if(lineEnd > 0){
+            autoKeyLineDelayMillis = autoKeyData.substring(1,lineEnd).toInt() * 1000;
+            autoKeyIndex = lineEnd + 1;
+        }
+    }
+
+    isAutoKeyHeadChar = true;
+    autoKeyFile.close();
 }

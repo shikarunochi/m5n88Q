@@ -4,7 +4,17 @@
 /*	仕様の詳細は、ヘッダファイル file-op.h 参照			     */
 /*									     */
 /*****************************************************************************/
-#include<M5Stack.h>
+#ifdef _CORES3
+#include <SD.h>
+//#include <SPIFFS.h>
+
+#include <M5Unified.h>
+#elif defined _ATOMS3R
+#include <M5GFX.h>
+#include <SPIFFS.h>
+#else
+#include <M5Stack.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -169,6 +179,7 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
         		    } else {
                         Serial.println("4");
 		            	/* DISK以外、ないしモードが違うならばNG */
+                        graph_restartDrawing();
 			            return NULL;
 		            }
 		        }
@@ -177,6 +188,7 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
 		/* ファイル名保持用のバッファを確保 */
 	    st->path = (char*)malloc(strlen(path) + 1);
 	    if (st->path == NULL) {
+            graph_restartDrawing();
     	    return NULL;
     	}
 	    /* FALLTHROUGH */
@@ -186,6 +198,17 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
             Serial.print("Path:");
             Serial.println(path);
             String stringPath = String(path);
+#if defined _ATOMS3R
+            if(strchr(mode,'+')!=0){
+                st->sdFile = SPIFFS.open(stringPath, "r+");
+            }else if(strchr(mode,'a')!=0){
+                st->sdFile = SPIFFS.open(stringPath, FILE_APPEND);
+            }else if(strchr(mode,'w')!=0){
+                st->sdFile = SPIFFS.open(stringPath, FILE_WRITE);
+            }else{
+                st->sdFile = SPIFFS.open(stringPath, FILE_READ);
+            }
+#else
             if(strchr(mode,'+')!=0){
                 st->sdFile = SD.open(stringPath, "r+");
             }else if(strchr(mode,'a')!=0){
@@ -195,6 +218,7 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
             }else{
                 st->sdFile = SD.open(stringPath, FILE_READ);
             }
+#endif
 	        if (st->sdFile) {
         	    st->type = type;
         	    if (st->path){
@@ -202,6 +226,8 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
                 }
 	            strncpy(st->mode, mode, sizeof(st->mode));
                 st->useFlag = true;
+                graph_restartDrawing();
+                Serial.println("open Success!");
 	            return st;
             } else {
                 Serial.println("open Fail!");
@@ -209,10 +235,9 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
                     free(st->path);
         		    st->path = NULL;
            	    }
+                graph_restartDrawing();
 	            return NULL;
             }
-
-
     }
 }
 
@@ -221,12 +246,14 @@ OSD_FILE *osd_fopen(int type, const char *path, const char *mode)
 int	osd_fclose(OSD_FILE *stream)
 {
   waitDrawing();
+  graph_stopDrawing();
     stream->sdFile.close();
   	stream->useFlag = false;
    	if (stream->path) {
         free(stream->path);
         stream->path = NULL;
     }
+    graph_restartDrawing();
     return 0;
 }
 
@@ -235,8 +262,13 @@ int	osd_fclose(OSD_FILE *stream)
 int	osd_fflush(OSD_FILE *stream)
 {
   waitDrawing();
-    if (stream == NULL) return fflush(NULL);
+  graph_stopDrawing();
+    if (stream == NULL) {
+        graph_restartDrawing();
+        return fflush(NULL);
+    }
     stream->sdFile.flush();
+    graph_restartDrawing();
     return EOF;
 }
 
@@ -245,6 +277,7 @@ int	osd_fflush(OSD_FILE *stream)
 int	osd_fseek(OSD_FILE *stream, long offset, int whence)
 {
   waitDrawing();
+  graph_stopDrawing();
     SeekMode seekMode;
     if(whence == SEEK_END){
         seekMode = SeekEnd;
@@ -255,6 +288,7 @@ int	osd_fseek(OSD_FILE *stream, long offset, int whence)
     }
 
     stream->sdFile.seek(offset, seekMode);
+    graph_restartDrawing();
     return 0;
 }
 
@@ -263,25 +297,31 @@ int	osd_fseek(OSD_FILE *stream, long offset, int whence)
 long	osd_ftell(OSD_FILE *stream)
 {
   waitDrawing();
-    return stream->sdFile.position();  
+  graph_stopDrawing();
+  long position = stream->sdFile.position();  
+  graph_restartDrawing();
+  return position;
 }
 
 
 void	osd_rewind(OSD_FILE *stream)
 {
   waitDrawing();
+  graph_stopDrawing();
     (void)osd_fseek(stream, 0L, SEEK_SET);
     osd_fflush(stream);
+  graph_restartDrawing();
 }
 
 size_t	osd_fread(void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
 {
   waitDrawing();
+  graph_stopDrawing();
     size_t readByte = 0;
     if(stream->sdFile.available()){
       readByte = stream->sdFile.read((byte*)ptr, nobj);
     }
-
+    graph_restartDrawing();
     return (readByte / size);
 }
 
@@ -290,26 +330,34 @@ size_t	osd_fread(void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
 size_t	osd_fwrite(const void *ptr, size_t size, size_t nobj, OSD_FILE *stream)
 {
   waitDrawing();
+  graph_stopDrawing();
     int writeByte = stream->sdFile.write((byte*)ptr, size * nobj);
     //Serial.printf("size:%d  nobj:%d retSize:%d", size, nobj, writeByte);
+    graph_restartDrawing();
     return writeByte / size;
 }
 
 int	osd_fputc(int c, OSD_FILE *stream)
 {
   waitDrawing();
-    return stream->sdFile.write(c);
+  graph_stopDrawing();
+  int result = stream->sdFile.write(c);
+  graph_restartDrawing();
+  return result;
 }
 
 
 int	osd_fgetc(OSD_FILE *stream)
 {
   waitDrawing();
+  graph_stopDrawing();
     uint8_t readData;
     if(stream->sdFile.available()){
       stream->sdFile.read(&readData, 1);
+      graph_restartDrawing();
       return readData;
     }
+    graph_restartDrawing();
     return EOF;
 }
 
@@ -317,10 +365,13 @@ int	osd_fgetc(OSD_FILE *stream)
 char *osd_fgets(char *str, int size, OSD_FILE *stream)
 {
     waitDrawing();
+    graph_stopDrawing();
     if(stream->sdFile.available()){
 	    stream->sdFile.readBytes(str, size);
+        graph_restartDrawing();
         return str;
     }
+    graph_restartDrawing();
     return NULL;
 }
 
@@ -328,8 +379,11 @@ char *osd_fgets(char *str, int size, OSD_FILE *stream)
 int	osd_fputs(const char *str, OSD_FILE *stream)
 {
     waitDrawing();
+    graph_stopDrawing();
     int length = strnlen(str, 1024);
-   	return stream->sdFile.write((uint8_t*)str, length); 
+    int result = stream->sdFile.write((uint8_t*)str, length); 
+    graph_restartDrawing();
+    return result;
 }
 
 
@@ -430,11 +484,13 @@ int	osd_path_join(const char *dir, const char *file, char path[], int size)
 int	osd_file_stat(const char *pathname)
 {
   waitDrawing();
+  graph_stopDrawing();
     FILE *fp;
 
     if ((fp = fopen(pathname, "r"))) {	/* ファイルとして開く	*/
 
 	fclose(fp);				/* 成功したらファイル	*/
+    graph_restartDrawing();
 	return FILE_STAT_FILE;
 
     } else {				/* 失敗したら存在しない	*/
@@ -484,7 +540,23 @@ int	osd_file_config_init(void)
 
 	/* カレントワーキングディレクトリ名 (CWD) を設定する */
     dir_cwd[0] = '\0';
+#ifdef _ATOMS3R
+	/* ROMディレクトリを設定する */
+    osd_set_dir_rom("/PC88ROM/");
 
+	/* DISKディレクトリを設定する */
+    osd_set_dir_disk("/PC88ROM/DISK/");
+
+	/* TAPEディレクトリを設定する */
+    osd_set_dir_tape("/PC88ROM/TAPE/");
+
+	/* SNAPディレクトリを設定する */
+    osd_set_dir_snap("/PC88ROM/SNAP/");
+
+	/* STATEディレクトリを設定する */
+    osd_set_dir_state("/PC88ROM/");
+
+#endif
 	/* ROMディレクトリを設定する */
     osd_set_dir_rom("/PC88ROM/");
 

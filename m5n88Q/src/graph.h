@@ -1,7 +1,6 @@
 #ifndef GRAPH_H_INCLUDED
 #define GRAPH_H_INCLUDED
 
-
 /***********************************************************************
  * グラフィック処理 (システム依存)
  ************************************************************************/
@@ -280,9 +279,12 @@ typedef struct {
 void	graph_update(int nr_rect, T_GRAPH_RECT rect[]);
 void	graph_updateDrawFlag();
 
+
 void graph_update_thread(void *pvParameters);
 
 void waitDrawing();
+void graph_stopDrawing();
+void graph_restartDrawing();
 
 /***********************************************************************
  * 属性の設定
@@ -302,7 +304,5 @@ void waitDrawing();
  ************************************************************************/
 void	graph_set_window_title(const char *title);
 void	graph_set_attribute(int mouse_show, int grab, int keyrepeat_on);
-
-
 
 #endif	/* GRAPH_H_INCLUDED */

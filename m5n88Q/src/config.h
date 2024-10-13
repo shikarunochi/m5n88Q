@@ -3,9 +3,18 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#ifdef _CORES3  
+#define FALSE 0
+#define TRUE 1
+#elif defined(_ATOMS3R)
+#define FALSE 0
+#define TRUE 1
+#else
 #define FALSE false
 #define TRUE true
+#endif
 #define null NULL
+
 
 
 /*----------------------------------------------------------------------*/

@@ -1399,6 +1399,9 @@ static int do_func(int func, int on);
 
 void quasi88_key(int code, int on)
 {
+    if(code == 0xff){ //無効キーコード
+        return;
+    }
     if (quasi88_is_exec())
     { /*===================================*/
 

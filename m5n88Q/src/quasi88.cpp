@@ -19,7 +19,13 @@
 /*									*/
 /************************************************************************/
 
+#ifdef _CORES3
+#include <M5Unified.h>
+#elif defined _ATOMS3R
+#include <lgfx.h>
+#else
 #include <M5Stack.h>
+#endif
 extern "C"
 {
 #include <stdio.h>
@@ -117,6 +123,7 @@ void quasi88_start(void)
 			printf("Stateload...OK\n");
 		fflush(NULL);
 	}
+
 	SET_PROC(3);
 	/* グラフィックシステム初期化	*/
 	if (screen_init() == FALSE)
@@ -153,6 +160,7 @@ void quasi88_start(void)
 	profiler_init();
 	emu_breakpoint_init();
 	quasi88_disk_eject_all();
+
   //drawEnable();
 	if (verbose_proc)
 		printf("Running QUASI88...\n");

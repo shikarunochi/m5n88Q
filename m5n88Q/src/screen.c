@@ -133,6 +133,7 @@ static	int	screen_by;		/*	   〃	    y (ドット)	*/
 /*CFG*/	int	status_bg = 0xd6d6d6;	/* ステータス背景色		*/
 
 static	int	enable_status = TRUE;	/* ステータス表示可能かどうか	*/
+
 /*CFG*/	int	show_status = TRUE;	/* ステータス表示有無		*/
 static	int	now_status = FALSE;	/* 現在、ステータス表示中なら真	*/
 
@@ -423,7 +424,7 @@ static	int	open_window(void)
 
 	/* 本当にステータス表示が可能かどうかを、最終判断 */
 	if (status_displayable && (spec->forbid_status == FALSE)) {
-	    enable_status = TRUE;
+  		enable_status = TRUE;
 	    /* show_status は現在値のまま */
 	} else {
 	    enable_status = FALSE;
@@ -898,7 +899,7 @@ int	quasi88_cfg_now_interp(void) { return use_half_interp; }
 /* 色補完の有無を設定する */
 void	quasi88_cfg_set_interp(int enable)
 {
-    use_half_interp = enable;
+	use_half_interp = enable;
     check_half_interp();
     set_vram2screen_list();
     screen_set_dirty_all();		/* メイン領域 初期化(==更新) */
